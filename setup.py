@@ -5,6 +5,29 @@ documentation
 
 from setuptools import setup, find_packages
 
+from os.path import isfile, getmtime
+from subprocess import call
+
+def should_make(dst, src):
+    src = src[0]
+    return not isfile(dst) or getmtime(dst) < getmtime(src)
+
+GPP_OPTIONS = ['-g', '-std=c++11', '-O3', '-Itracker', '-shared']
+LINUX_OPTIONS = ['-fPIC']
+WINDOWS_OPTIONS = ['-static-libgcc', '-static-libstdc++', '/usr/x86_64-w64-mingw32/lib/libwinpthread.a']
+
+
+if should_make('superresolution/_tracker.so', ['tracker/tracker.cpp']):
+    call(['g++'] + GPP_OPTIONS + LINUX_OPTIONS + ['tracker/tracker.cpp', '-o', 'superresolution/_tracker.so'])
+
+if should_make('superresolution/_tracker.dll', ['tracker/tracker.cpp']):
+    call(['x86_64-w64-mingw32-g++'] + GPP_OPTIONS + WINDOWS_OPTIONS + ['tracker/tracker.cpp', '-o', 'superresolution/_tracker.dll'])
+
+if should_make('superresolution/libwinpthread-1.dll', ['/usr/x86_64-w64-mingw32/bin/libwinpthread-1.dll']):
+    call(['cp', '/usr/x86_64-w64-mingw32/bin/libwinpthread-1.dll', 'superresolution/'])
+
+
+
 
 setup(
     name='superresolution',
