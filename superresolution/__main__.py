@@ -46,8 +46,13 @@ from vispy.scene import SceneCanvas, visuals
 from vispy.visuals import ImageVisual, transforms
 from vispy import app
 
+import os
+
 def load_dataset(filename):
-    return pandas.read_table(filename, skiprows=0, header=1, sep=' ')
+    if os.path.splitext(filename)[1].lower() == '.ascii':
+        return pandas.read_table(filename, sep=',')
+    else:
+        return pandas.read_table(filename, skiprows=0, header=1, sep=' ')
 
 def prepare_dataset(data):
     lookup = tuple(data.columns)
@@ -88,8 +93,30 @@ def prepare_dataset(data):
         'localiztion_precision_z(pixels),': 'locprec_z',
         'correlation_coefficient,': 'corr_coeff',
         'frame': 'frame'
+        },
+        ### EXPERIMENTAL SUPPORT FOR TOTALLY DIFFERENT FORMATS
+        ('#stackID(UINT32)',
+         ' frameID(UINT32)',
+         ' eventID(UINT32)',
+         ' x0(float)',
+         ' y0(float)',
+         ' photon_count(float)',
+         ' z0(float)',
+         ' type(UINT32)',
+         ' n_raw(UINT32) '): {
+            '#stackID(UINT32)': 'stack',
+ ' frameID(UINT32)': 'frame',
+ ' eventID(UINT32)': 'event',
+ ' x0(float)': 'x',
+ ' y0(float)': 'y',
+ ' photon_count(float)': 'amp',
+ ' z0(float)': 'z',
+ ' type(UINT32)' :'type_',
+ ' n_raw(UINT32) ': 'raw'
         }
     }
+
+    expected = ['amp', 'x', 'y', 'sigma_x', 'sigma_y', 'back','z','quality',  'cnr', 'locprec_x', 'locprec_y', 'locprec_z', 'corr_coeff', 'frame']
 
     try:
         mapping = mapping_table[lookup]
@@ -97,6 +124,12 @@ def prepare_dataset(data):
         print("The super resolution tabular format is stored in an unsupported way.")
         raise
     data.rename(columns=mapping, inplace=True)
+
+    ###
+    for expected_column in expected:
+        if expected_column not in data.columns:
+            data[expected_column] = numpy.zeros(len(data))
+    ###
 
     if not (data.locprec_x == data.locprec_y).all():
         print("Warning! Localization precision is not x/y identical!")
