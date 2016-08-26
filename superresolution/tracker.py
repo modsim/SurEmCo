@@ -31,7 +31,13 @@ class Tracker(object):
     def __init__(self):
         file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '_tracker.' + ('so' if sys.platform == 'linux' else 'dll'))
 
+        old_cwd = os.getcwd()
+
+        os.chdir(os.path.dirname(file))
+
         _track_so = ctypes.CDLL(file)
+
+        os.chdir(old_cwd)
 
         _track_so.track.argtypes = (
             numpy.ctypeslib.ndpointer(**self.track_input_type), #, flags='C_CONTIGUOUS'),
@@ -62,9 +68,15 @@ class Tracker(object):
         if strategy is None:
             strategy = self.STRATEGY_BRUTE_FORCE
 
+        if len(transfer) == 0:
+            raise RuntimeError('Empty data!')
+
         return self._track(transfer, len(transfer), maximum_displacement, memory, mode, strategy)
 
     def msd(self, transfer, micron_per_pixel=1.0, frames_per_second=1.0):
+        if len(transfer) == 0:
+            raise RuntimeError('Empty data!')
+
         return self._msd(transfer, len(transfer), micron_per_pixel, frames_per_second)
 
     def __del__(self):
