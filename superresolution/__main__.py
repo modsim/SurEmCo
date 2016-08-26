@@ -564,7 +564,10 @@ class SuperresolutionTracking(Visualizer):
                 sys.exit(1)
 
             if values.refresh:
-                redo(values.cell)
+                try:
+                    redo(values.cell)
+                except Exception as e:
+                    print("error in cell", n, e)
 
             if values.msd:
                 calc_diff(values.cell)
@@ -576,7 +579,10 @@ class SuperresolutionTracking(Visualizer):
 
             if values.analyse_all or (values.tracker.startswith('custom') and values.live == 1):
                 for n in range(len(cells)):
-                    redo(n)
+                    try:
+                        redo(n)
+                    except Exception as e:
+                        print("error in cell", n, e)
                 print("Done.")
 
                 if False:
