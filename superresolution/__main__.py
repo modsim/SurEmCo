@@ -152,10 +152,15 @@ class SuperresolutionTracking(Visualizer):
 
     def visualization(self):
         disable_detection = False
+        drift_correction = False
 
         if '--disable-detection' in sys.argv:
             disable_detection = True
             del sys.argv[sys.argv.index('--disable-detection')]
+
+        if '--drift-correction' in sys.argv:
+            drift_correction = True
+            del sys.argv[sys.argv.index('--drift-correction')]
 
 
         if len(sys.argv) > 2:
@@ -247,6 +252,49 @@ class SuperresolutionTracking(Visualizer):
                 print("WARNING: Cell detection was requested, but no cells were detected! Falling back to whole image as ROI")
 
                 cells = [_dummy_cell()]
+
+
+        # this does NOT work.
+        # if drift_correction:
+        #     print("Drift correction")
+        #
+        #     groups_groups = [cell.subset.groupby(by='frame') for cell in cells]
+        #
+        #     n = 0
+        #     drift_subset = numpy.zeros((sum(len(g) for g in groups_groups), 3))
+        #
+        #     for groups in groups_groups:
+        #
+        #         first_x = None
+        #         first_y = None
+        #
+        #         for frame, group in groups:
+        #             if first_x is None and first_y is None:
+        #                 first_x, first_y = group.x.mean(), group.y.mean()
+        #             drift_subset[n, 0] = frame
+        #             drift_subset[n, 1] = group.x.mean() - first_x
+        #             drift_subset[n, 2] = group.y.mean() - first_y
+        #
+        #             n += 1
+        #
+        #
+        #     from scipy.stats import linregress
+        #
+        #
+        #     print("XFIT")
+        #     xfit = linregress(drift_subset[:, 0], drift_subset[:, 1])
+        #     print(xfit)
+        #     print("YFIT")
+        #     yfit = linregress(drift_subset[:, 0], drift_subset[:, 2])
+        #     print(yfit)
+        #
+        #     for cell in cells:
+        #         cell.subset.x -= cell.subset.frame * xfit.slope + xfit.intercept
+        #         cell.subset.y -= cell.subset.frame * yfit.slope + xfit.intercept
+        #
+        #     #raise SystemExit
+
+
 
         #####
 
@@ -343,6 +391,7 @@ class SuperresolutionTracking(Visualizer):
             def calc_diff(n):
 
                 import trackpy
+                trackpy.compute_drift
                 cell = cells[n]
 
                 tracked = cell['tracked']
@@ -494,6 +543,14 @@ class SuperresolutionTracking(Visualizer):
                         tracked = tracked.sort(columns=['particle', 'frame'])
 
 
+                if drift_correction:
+                    from trackpy import compute_drift, subtract_drift
+
+                    drift = compute_drift(tracked)
+                    print(drift)
+                    tracked = subtract_drift(drift)
+
+                #tracked
 
 
 
