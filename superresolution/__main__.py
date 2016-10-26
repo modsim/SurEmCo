@@ -38,6 +38,7 @@ from .misc import to_rgb8, binarization_to_contours, binarize_image, contour_to_
 import numpy
 import pandas
 import cv2
+import re
 
 
 
@@ -59,60 +60,89 @@ def prepare_dataset(data):
 
     mapping_table = {
         #new!
-        ('#amplitude(photoelectrons),', 'x0(pixels),', 'y0(pixels),', 'simga_x(pixels),', 'sigma_y(pixels),', 'background(photoelectrons),', 'z_position(pixels),', 'quality,', 'CNR,', 'localization_precision_x(pixels),', 'localization_precision_y(pixels),', 'localization_precision_z(pixels),', 'correlation_coefficient,', 'frame'):
-        {
-        '#amplitude(photoelectrons),': 'amp',
-        'x0(pixels),': 'x',
-        'y0(pixels),': 'y',
-        'simga_x(pixels),': 'sigma_x',
-        'sigma_y(pixels),': 'sigma_y',
-        'background(photoelectrons),': 'back',
-        'z_position(pixels),': 'z',
-        'quality,': 'quality',
-        'CNR,': 'cnr',
-        'localization_precision_x(pixels),': 'locprec_x',
-        'localization_precision_y(pixels),': 'locprec_y',
-        'localization_precision_z(pixels),': 'locprec_z',
-        'correlation_coefficient,': 'corr_coeff',
-        'frame': 'frame'
+        (
+            '#amplitude(photoelectrons),',
+            'x0(pixels),', 'y0(pixels),',
+            'simga_x(pixels),',
+            'sigma_y(pixels),',
+            'background(photoelectrons),',
+            'z_position(pixels),',
+            'quality,',
+            'CNR,',
+            'localization_precision_x(pixels),',
+            'localization_precision_y(pixels),',
+            'localization_precision_z(pixels),',
+            'correlation_coefficient,',
+            'frame'
+        ): {
+            '#amplitude(photoelectrons),': 'amp',
+            'x0(pixels),': 'x',
+            'y0(pixels),': 'y',
+            'simga_x(pixels),': 'sigma_x',
+            'sigma_y(pixels),': 'sigma_y',
+            'background(photoelectrons),': 'back',
+            'z_position(pixels),': 'z',
+            'quality,': 'quality',
+            'CNR,': 'cnr',
+            'localization_precision_x(pixels),': 'locprec_x',
+            'localization_precision_y(pixels),': 'locprec_y',
+            'localization_precision_z(pixels),': 'locprec_z',
+            'correlation_coefficient,': 'corr_coeff',
+            'frame': 'frame'
         },
         #old
-        ('#amplitude(photonelectrons),', 'x0(pixels),', 'y0(pixels),', 'simga_x(pixels),', 'sigma_y(pixels),', 'backgroud(photonelectrons),', 'z_position(pixels),', 'quality,', 'CNR,', 'localiztion_precision_x(pixels),', 'localiztion_precision_y(pixels),', 'localiztion_precision_z(pixels),', 'correlation_coefficient,', 'frame'):
-        {
-        '#amplitude(photonelectrons),': 'amp',
-        'x0(pixels),': 'x',
-        'y0(pixels),': 'y',
-        'simga_x(pixels),': 'sigma_x',
-        'sigma_y(pixels),': 'sigma_y',
-        'backgroud(photonelectrons),': 'back',
-        'z_position(pixels),': 'z',
-        'quality,': 'quality',
-        'CNR,': 'cnr',
-        'localiztion_precision_x(pixels),': 'locprec_x',
-        'localiztion_precision_y(pixels),': 'locprec_y',
-        'localiztion_precision_z(pixels),': 'locprec_z',
-        'correlation_coefficient,': 'corr_coeff',
-        'frame': 'frame'
+        (
+            '#amplitude(photonelectrons),',
+            'x0(pixels),',
+            'y0(pixels),',
+            'simga_x(pixels),',
+            'sigma_y(pixels),',
+            'backgroud(photonelectrons),',
+            'z_position(pixels),',
+            'quality,',
+            'CNR,',
+            'localiztion_precision_x(pixels),',
+            'localiztion_precision_y(pixels),',
+            'localiztion_precision_z(pixels),',
+            'correlation_coefficient,',
+            'frame'
+        ): {
+            '#amplitude(photonelectrons),': 'amp',
+            'x0(pixels),': 'x',
+            'y0(pixels),': 'y',
+            'simga_x(pixels),': 'sigma_x',
+            'sigma_y(pixels),': 'sigma_y',
+            'backgroud(photonelectrons),': 'back',
+            'z_position(pixels),': 'z',
+            'quality,': 'quality',
+            'CNR,': 'cnr',
+            'localiztion_precision_x(pixels),': 'locprec_x',
+            'localiztion_precision_y(pixels),': 'locprec_y',
+            'localiztion_precision_z(pixels),': 'locprec_z',
+            'correlation_coefficient,': 'corr_coeff',
+            'frame': 'frame'
         },
         ### EXPERIMENTAL SUPPORT FOR TOTALLY DIFFERENT FORMATS
-        ('#stackID(UINT32)',
-         ' frameID(UINT32)',
-         ' eventID(UINT32)',
-         ' x0(float)',
-         ' y0(float)',
-         ' photon_count(float)',
-         ' z0(float)',
-         ' type(UINT32)',
-         ' n_raw(UINT32) '): {
+        (
+            '#stackID(UINT32)',
+            ' frameID(UINT32)',
+            ' eventID(UINT32)',
+            ' x0(float)',
+            ' y0(float)',
+            ' photon_count(float)',
+            ' z0(float)',
+            ' type(UINT32)',
+            ' n_raw(UINT32) '
+        ): {
             '#stackID(UINT32)': 'stack',
- ' frameID(UINT32)': 'frame',
- ' eventID(UINT32)': 'event',
- ' x0(float)': 'x',
- ' y0(float)': 'y',
- ' photon_count(float)': 'amp',
- ' z0(float)': 'z',
- ' type(UINT32)' :'type_',
- ' n_raw(UINT32) ': 'raw'
+            ' frameID(UINT32)': 'frame',
+            ' eventID(UINT32)': 'event',
+            ' x0(float)': 'x',
+            ' y0(float)': 'y',
+            ' photon_count(float)': 'amp',
+            ' z0(float)': 'z',
+            ' type(UINT32)' :'type_',
+            ' n_raw(UINT32) ': 'raw'
         }
     }
 
@@ -197,11 +227,22 @@ class SuperresolutionTracking(Visualizer):
             image = image.mean(axis=2)
 
 
+        def num_tokenize(file_name):
+            def try_int(fragment):
+                try:
+                    fragment_int = int(fragment)
+                    if str(fragment_int) == fragment:
+                        return fragment_int
+                except ValueError:
+                    pass
+                return fragment
+
+            return tuple(try_int(fragment) for fragment in re.split('(\d+)', file_name))
 
 
         datasets = []
 
-        for tabular_file in sorted(tabular_files):
+        for tabular_file in sorted(tabular_files, key=num_tokenize):
             print("Reading %s" % (tabular_file,))
 
             local_data = load_dataset(tabular_file)
@@ -255,47 +296,68 @@ class SuperresolutionTracking(Visualizer):
 
 
         # this does NOT work.
-        # if drift_correction:
-        #     print("Drift correction")
-        #
-        #     groups_groups = [cell.subset.groupby(by='frame') for cell in cells]
-        #
-        #     n = 0
-        #     drift_subset = numpy.zeros((sum(len(g) for g in groups_groups), 3))
-        #
-        #     for groups in groups_groups:
-        #
-        #         first_x = None
-        #         first_y = None
-        #
-        #         for frame, group in groups:
-        #             if first_x is None and first_y is None:
-        #                 first_x, first_y = group.x.mean(), group.y.mean()
-        #             drift_subset[n, 0] = frame
-        #             drift_subset[n, 1] = group.x.mean() - first_x
-        #             drift_subset[n, 2] = group.y.mean() - first_y
-        #
-        #             n += 1
-        #
-        #
-        #     from scipy.stats import linregress
-        #
-        #
-        #     print("XFIT")
-        #     xfit = linregress(drift_subset[:, 0], drift_subset[:, 1])
-        #     print(xfit)
-        #     print("YFIT")
-        #     yfit = linregress(drift_subset[:, 0], drift_subset[:, 2])
-        #     print(yfit)
-        #
-        #     for cell in cells:
-        #         cell.subset.x -= cell.subset.frame * xfit.slope + xfit.intercept
-        #         cell.subset.y -= cell.subset.frame * yfit.slope + xfit.intercept
+        if drift_correction:
+            print("Drift correction")
+
+            groups_groups = [cell.subset.groupby(by='frame') for cell in cells]
+
+            n = 0
+            drift_subset = numpy.zeros((sum(len(g) for g in groups_groups), 3))
+
+            for groups in groups_groups:
+
+                first_x = None
+                first_y = None
+
+                for frame, group in groups:
+                    if first_x is None and first_y is None:
+                        first_x, first_y = group.x.mean(), group.y.mean()
+                    drift_subset[n, 0] = frame
+                    drift_subset[n, 1] = group.x.mean() - first_x
+                    drift_subset[n, 2] = group.y.mean() - first_y
+
+                    n += 1
+
+
+            from scipy.stats import linregress
+
+
+            print("XFIT")
+            xfit = linregress(drift_subset[:, 0], drift_subset[:, 1])
+            print(xfit)
+            print("YFIT")
+            yfit = linregress(drift_subset[:, 0], drift_subset[:, 2])
+            print(yfit)
+
+            for cell in cells:
+                cell.subset.x -= cell.subset.frame * xfit.slope# + xfit.intercept
+                cell.subset.y -= cell.subset.frame * yfit.slope# + yfit.intercept
         #
         #     #raise SystemExit
 
+        if False and drift_correction:
+            intermediate = data.groupby('frame')
+            drift_subset = numpy.zeros((len(intermediate), 3))
 
+            for n, (frame, g) in enumerate(intermediate):
+                drift_subset[n, 0] = frame
+                drift_subset[n, 1] = g.x.mean()
+                drift_subset[n, 2] = g.y.mean()
 
+            drift_subset[:, 1] -= drift_subset[0, 1]
+            drift_subset[:, 2] -= drift_subset[0, 2]
+
+            from scipy.stats import linregress
+            print("XFIT")
+            xfit = linregress(drift_subset[:, 0], drift_subset[:, 1])
+            print(xfit)
+            print("YFIT")
+            yfit = linregress(drift_subset[:, 0], drift_subset[:, 2])
+            print(yfit)
+
+            for cell in cells:
+                cell.subset.x -= cell.subset.frame * xfit.slope + xfit.intercept
+                cell.subset.y -= cell.subset.frame * yfit.slope + yfit.intercept
         #####
 
         plugin = VispyPlugin()
@@ -390,8 +452,6 @@ class SuperresolutionTracking(Visualizer):
 
             def calc_diff(n):
 
-                import trackpy
-                trackpy.compute_drift
                 cell = cells[n]
 
                 tracked = cell['tracked']
@@ -543,12 +603,13 @@ class SuperresolutionTracking(Visualizer):
                         tracked = tracked.sort(columns=['particle', 'frame'])
 
 
-                if drift_correction:
-                    from trackpy import compute_drift, subtract_drift
+                #if drift_correction:
+                #    from trackpy import compute_drift, subtract_drift
 
-                    drift = compute_drift(tracked)
-                    print(drift)
-                    tracked = subtract_drift(drift)
+                #    drift = compute_drift(tracked)
+                #    print(drift)
+                #    tracked = subtract_drift(drift)
+
 
                 #tracked
 
