@@ -433,7 +433,8 @@ class SuperresolutionTracking(Visualizer):
                     "Filename AVG": '',
                     "Filenames Results": '',
                     "Filename AVG full": '',
-                    "Filenames Results full": ''
+                    "Filenames Results full": '',
+                    "Westerwalbesloh Ratio": float('nan')  # this needs to be renamed at some point ;)
                 })
 
             self.output_model.update_data(result_table)
@@ -655,6 +656,10 @@ class SuperresolutionTracking(Visualizer):
                 #print(tracked)
                 the_count = int(tracked.particle.max())
                 result_table[n]["Count"] = the_count
+
+                ###
+                result_table[n]["Westerwalbesloh Ratio"] = the_count / len(tracked)
+                ###
 
                 result_table[n]["Mean Loc Precision (µm)"] = subset.locprec.mean() * MICRON_PER_PIXEL
                 result_table[n]["Mean Loc Sigma (µm)"] = subset.sigma.mean() * MICRON_PER_PIXEL
