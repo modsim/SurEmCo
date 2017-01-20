@@ -1,7 +1,10 @@
+import re
+
 import numpy
 import numexpr
 import pandas
 import cv2
+
 from scipy.spatial import cKDTree as KDTree
 
 
@@ -9,6 +12,19 @@ from scipy.spatial import cKDTree as KDTree
 # pyplot.rcParams['figure.figsize'] = (40, 8)
 # pyplot.rcParams['figure.dpi'] = 150
 # pyplot.rcParams['image.cmap'] = 'gray'
+
+def num_tokenize(file_name):
+    def try_int(fragment):
+        try:
+            fragment_int = int(fragment)
+            if str(fragment_int) == fragment:
+                return fragment_int
+        except ValueError:
+            pass
+        return fragment
+
+    return tuple(try_int(fragment) for fragment in re.split('(\d+)', file_name))
+
 
 # ## GENERIC HELPERS
 class NeatDict(dict):
@@ -117,7 +133,7 @@ def contour_to_cell(contour):
     return cell
 
 
-def get_subset_and_snippet(cell, data, image):
+def get_subset_and_snippet(cell, data, image, border=0.0):
     x, y, w, h = cell.bb
 
     longest_edge = round(numpy.sqrt(w ** 2.0 + h ** 2.0))
@@ -131,9 +147,48 @@ def get_subset_and_snippet(cell, data, image):
 
     x, y = max(0, x), max(0, y)
 
+    x -= 2*border
+    y -= 2*border
+    w += 2*border
+
     subset = data.query('@x < x < (@x+@w) and @y < y < (@y+@h)')
-    mask = [cv2.pointPolygonTest(cell.hull, (point_x, point_y), measureDist=False) >= 0 for point_x, point_y in
+
+    hull_to_use = cell.hull
+
+    if border > 0.0:
+        hull_to_use = hull_to_use.astype(numpy.float32)
+
+        mi0, mi1 = hull_to_use[:, 0, 0].min(), hull_to_use[:, 0, 1].min()
+        hull_to_use[:, 0, 0] -= mi0
+        hull_to_use[:, 0, 1] -= mi1
+
+        ma0, ma1 = hull_to_use[:, 0, 0].max(), hull_to_use[:, 0, 1].max()
+
+        hull_to_use[:, 0, 0] -= ma0/2
+        hull_to_use[:, 0, 1] -= ma1/2
+
+        hull_to_use[:, 0, 0] *= (ma0 + border) / ma0
+        hull_to_use[:, 0, 1] *= (ma1 + border) / ma1
+
+        hull_to_use[:, 0, 0] += ma0 / 2
+        hull_to_use[:, 0, 1] += ma1 / 2
+
+        hull_to_use[:, 0, 0] += mi0
+        hull_to_use[:, 0, 1] += mi1
+
+    mask = [cv2.pointPolygonTest(
+        hull_to_use.astype(numpy.int32),
+        (point_x, point_y),
+        measureDist=False) >= 0 for point_x, point_y in
             zip(subset.x, subset.y)]
+
+    for point_x, point_y in zip(subset.x, subset.y):
+        print(cv2.pointPolygonTest(
+        hull_to_use.astype(numpy.int32),
+        (point_x, point_y),
+        measureDist=True))
+
+    print(mask)
     subset = subset[mask]
 
     cell.subset = subset

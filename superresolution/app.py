@@ -1,16 +1,42 @@
-import re
 import sys
 
 import cv2
 import numpy
+import os.path
+
+from argparse import ArgumentParser
 from PySide.QtGui import QFileDialog
 from vispy.scene import visuals
 
+from yaval import Visualizer, VispyPlugin, Values
+from .misc import NeatDict
 from .io import is_image_file, load_dataset, prepare_dataset
 from .misc import to_rgb8, binarize_image, contour_to_cell, binarization_to_contours, \
-    get_subset_and_snippet
+    get_subset_and_snippet, num_tokenize
 
-from yaval import Visualizer, VispyPlugin, Values
+
+def create_argparser():
+    parser = ArgumentParser(description="Superresolution Analyser")
+
+    parser.add_argument("files", metavar="files", type=str, nargs='*', default=[], help="input files, one must be a DIA image")
+    parser.add_argument("--disable-detection", dest="disable_detection", action='store_true')
+    parser.add_argument("--drift-correction", dest="drift_correction", action='store_true')
+    parser.add_argument("--show-unassigned", dest="show_unassigned", action='store_true')
+    parser.add_argument("--add-cell-border", dest="border", type=float, default=0.0)
+
+    return parser
+
+
+def _dummy_cell(data):
+    cell = NeatDict()
+    cell.contour = []
+    cell.hull = []
+
+    cell.ellipse = [0.0, 0.0]
+    cell.bb = [0.0, 0.0, 0.0, 0.0]
+
+    cell.subset = data
+    return cell
 
 
 class SuperresolutionTracking(Visualizer):
@@ -19,34 +45,23 @@ class SuperresolutionTracking(Visualizer):
             "Preliminary software, do not rely on results!"
 
     def visualization(self):
-        disable_detection = False
-        drift_correction = False
+        parser = create_argparser()
+        args = parser.parse_args()
 
-        if '--disable-detection' in sys.argv:
-            disable_detection = True
-            del sys.argv[sys.argv.index('--disable-detection')]
+        if len(args.files) < 2:
+            args.files, _ = QFileDialog().getOpenFileNames()
 
-        if '--drift-correction' in sys.argv:
-            drift_correction = True
-            del sys.argv[sys.argv.index('--drift-correction')]
-
-        if len(sys.argv) > 2:
-            filenames = sys.argv[1:]
-        else:
-            filenames, _ = QFileDialog().getOpenFileNames()
-
-            if len(filenames) == 1:
+            if len(args.files) == 1:
                 while True:
                     new_fnames, _ = QFileDialog().getOpenFileNames()
-                    print(new_fnames)
                     if len(new_fnames) == 0:
                         break
                     else:
-                        filenames += new_fnames
+                        args.files += new_fnames
 
         average_file, tabular_files = None, []
 
-        for filename in filenames:
+        for filename in args.files:
             if is_image_file(filename=filename):
                 average_file = filename
             else:
@@ -59,18 +74,6 @@ class SuperresolutionTracking(Visualizer):
 
         if len(image.shape) == 3:
             image = image.mean(axis=2)
-
-        def num_tokenize(file_name):
-            def try_int(fragment):
-                try:
-                    fragment_int = int(fragment)
-                    if str(fragment_int) == fragment:
-                        return fragment_int
-                except ValueError:
-                    pass
-                return fragment
-
-            return tuple(try_int(fragment) for fragment in re.split('(\d+)', file_name))
 
         datasets = []
 
@@ -89,31 +92,21 @@ class SuperresolutionTracking(Visualizer):
             local_data.frame += maximum_frame + 1  # frame starts at 0 so we add 1
             data = data.append(local_data)
 
+        data.reindex()
+        data['original_index'] = data.index
+
         print("Last frame is %d" % (data.frame.max(),))
 
         canvas = to_rgb8(image)
 
-        def _dummy_cell():
-            from .misc import NeatDict
-            cell = NeatDict()
-            cell.contour = []
-            cell.hull = []
-
-            cell.ellipse = []
-            cell.bb = []
-
-            cell.subset = data
-            return cell
-
-        if disable_detection:
-            cells = [_dummy_cell()]
+        if args.disable_detection:
+            cells = [_dummy_cell(data)]
         else:
-
             binarization = binarize_image(image)
             cells = [contour_to_cell(contour) for contour in binarization_to_contours(binarization)]
 
             for cell in cells:
-                get_subset_and_snippet(cell, data, image)
+                get_subset_and_snippet(cell, data, image, args.border / 0.065)  # TODO hardcoded
             # markerize_identical_emitters(cell)
 
             for cell in cells:
@@ -128,10 +121,36 @@ class SuperresolutionTracking(Visualizer):
                     " Falling back to whole image as ROI"
                 )
 
-                cells = [_dummy_cell()]
+                cells = [_dummy_cell(data)]
+
+            if args.show_unassigned:
+                mask = numpy.ones(len(data), dtype=bool)
+
+                acc = 0
+                print(len(mask))
+                for cell in cells:
+                    acc += len(cell.subset)
+                    print(cell.subset)
+                    print(cell.subset.original_index)
+                    mask[cell.subset.original_index] = False
+                    print(numpy.sum(mask))
+
+                print(acc)
+
+                remainder = data[mask]
+                del mask
+
+                print(len(remainder))
+                cells.append(_dummy_cell(remainder))
+
+                cells.append(_dummy_cell(data))
+
+
+
+
 
         # this does NOT work.
-        if drift_correction:
+        if args.drift_correction:
             print("Drift correction")
 
             groups_groups = [cell.subset.groupby(by='frame') for cell in cells]
@@ -168,7 +187,7 @@ class SuperresolutionTracking(Visualizer):
         #
         #     #raise SystemExit
 
-        if False and drift_correction:
+        if False and args.drift_correction:
             intermediate = data.groupby('frame')
             drift_subset = numpy.zeros((len(intermediate), 3))
 
@@ -428,7 +447,7 @@ class SuperresolutionTracking(Visualizer):
                     else:
                         tracked = tracked.sort(columns=['particle', 'frame'])
 
-                # if drift_correction:
+                # if args.drift_correction:
                 #    from trackpy import compute_drift, subtract_drift
 
                 #    drift = compute_drift(tracked)
@@ -465,8 +484,6 @@ class SuperresolutionTracking(Visualizer):
 
                 result_table[n]["Max Displacement (µm)"] = values.maximum_displacement
                 result_table[n]["Max Dark (frames)"] = values.maximum_blink_dark
-
-                import os.path
 
                 result_table[n]["Filename AVG"] = os.path.basename(average_file)
                 result_table[n]["Filenames Results"] = "::".join(os.path.basename(t) for t in tabular_files)
