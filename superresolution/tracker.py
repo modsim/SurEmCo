@@ -4,14 +4,13 @@ import os
 import numpy
 import numpy.ctypeslib
 
-class Tracker(object):
 
+class Tracker(object):
     TRACKING_MOVING = 0
     TRACKING_STATIC = 1
 
     STRATEGY_BRUTE_FORCE = 0
     STRATEGY_KDTREE = 1
-
 
     track_input_type = {'dtype': [
         ('x', 'float64'),
@@ -29,7 +28,8 @@ class Tracker(object):
     track = None
 
     def __init__(self):
-        file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '_tracker.' + ('so' if sys.platform == 'linux' else 'dll'))
+        file = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            '_tracker.' + ('so' if sys.platform == 'linux' else 'dll'))
 
         old_cwd = os.getcwd()
 
@@ -40,7 +40,7 @@ class Tracker(object):
         os.chdir(old_cwd)
 
         _track_so.track.argtypes = (
-            numpy.ctypeslib.ndpointer(**self.track_input_type), #, flags='C_CONTIGUOUS'),
+            numpy.ctypeslib.ndpointer(**self.track_input_type),  # , flags='C_CONTIGUOUS'),
             ctypes.c_size_t,
             ctypes.c_float,
             ctypes.c_int32,
@@ -50,7 +50,7 @@ class Tracker(object):
         _track_so.track.restype = None
 
         _track_so.msd.argtypes = (
-            numpy.ctypeslib.ndpointer(**self.track_input_type), #, flags='C_CONTIGUOUS'),
+            numpy.ctypeslib.ndpointer(**self.track_input_type),  # , flags='C_CONTIGUOUS'),
             ctypes.c_size_t,
             ctypes.c_float,
             ctypes.c_float
@@ -80,16 +80,15 @@ class Tracker(object):
         return self._msd(transfer, len(transfer), micron_per_pixel, frames_per_second)
 
     def __del__(self):
-        if self.debug:
-            return
-            _handle = self._track_so._handle
-            del self._track_so
-            if sys.platform == 'linux':
-                dl = ctypes.CDLL('libdl.so')
-                dl.dlclose(_handle)
+        pass
+        # if self.debug:
+        #     return
+        #     _handle = self._track_so._handle
+        #     del self._track_so
+        #     if sys.platform == 'linux':
+        #         dl = ctypes.CDLL('libdl.so')
+        #         dl.dlclose(_handle)
 
     @classmethod
     def empty_track_input_type(cls, count):
         return numpy.zeros(count, **cls.track_input_type)
-
-

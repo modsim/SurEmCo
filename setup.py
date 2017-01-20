@@ -16,18 +16,14 @@ GPP_OPTIONS = ['-g', '-std=c++11', '-O3', '-Itracker', '-shared']
 LINUX_OPTIONS = ['-fPIC']
 WINDOWS_OPTIONS = ['-static-libgcc', '-static-libstdc++', '/usr/x86_64-w64-mingw32/lib/libwinpthread.a']
 
-
 if should_make('superresolution/_tracker.so', ['tracker/tracker.cpp']):
     call(['g++'] + GPP_OPTIONS + LINUX_OPTIONS + ['tracker/tracker.cpp', '-o', 'superresolution/_tracker.so'])
 
 if should_make('superresolution/_tracker.dll', ['tracker/tracker.cpp']):
     call(['x86_64-w64-mingw32-g++'] + GPP_OPTIONS + WINDOWS_OPTIONS + ['tracker/tracker.cpp', '-o', 'superresolution/_tracker.dll'])
 
-if should_make('superresolution/libwinpthread-1.dll', ['/usr/x86_64-w64-mingw32/bin/libwinpthread-1.dll']):
-    call(['cp', '/usr/x86_64-w64-mingw32/bin/libwinpthread-1.dll', 'superresolution/'])
-
-
-
+if should_make('superresolution/libwinpthread-1.dll', ['/usr/x86_64-w64-mingw32/lib/libwinpthread-1.dll']):
+    call(['cp', '/usr/x86_64-w64-mingw32/lib/libwinpthread-1.dll', 'superresolution/'])
 
 setup(
     name='superresolution',
@@ -38,7 +34,7 @@ setup(
     author_email='c.sachs@fz-juelich.de',
     url='https://github.com/modsim/superresolution-bacterial-analysis-tool',
     packages=['superresolution'],
-    requires=['yaval'],
+    requires=['yaval', 'PySide', 'numpy', 'cv2', 'vispy', 'trackpy', 'scipy', 'pandas', 'numexpr'],
     license='BSD',
     py_modules=['superresolution'],
     package_data={
