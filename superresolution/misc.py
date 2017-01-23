@@ -2,7 +2,6 @@ import re
 
 import numpy
 import numexpr
-import pandas
 import cv2
 
 from scipy.spatial import cKDTree as KDTree
@@ -147,9 +146,10 @@ def get_subset_and_snippet(cell, data, image, border=0.0):
 
     x, y = max(0, x), max(0, y)
 
-    x -= 2*border
-    y -= 2*border
-    w += 2*border
+    x -= border
+    y -= border
+    w += 2 * border
+    h += 2 * border
 
     subset = data.query('@x < x < (@x+@w) and @y < y < (@y+@h)')
 
@@ -176,19 +176,12 @@ def get_subset_and_snippet(cell, data, image, border=0.0):
         hull_to_use[:, 0, 0] += mi0
         hull_to_use[:, 0, 1] += mi1
 
-    mask = [cv2.pointPolygonTest(
-        hull_to_use.astype(numpy.int32),
-        (point_x, point_y),
+
+    mask = [cv2.pointPolygonTest(hull_to_use.astype(numpy.int32), (point_x, point_y),
         measureDist=False) >= 0 for point_x, point_y in
             zip(subset.x, subset.y)]
 
-    for point_x, point_y in zip(subset.x, subset.y):
-        print(cv2.pointPolygonTest(
-        hull_to_use.astype(numpy.int32),
-        (point_x, point_y),
-        measureDist=True))
-
-    print(mask)
+    #print(mask)
     subset = subset[mask]
 
     cell.subset = subset
@@ -265,148 +258,3 @@ def to_rgb8(image):
     incoming *= 255
     new_mix[:, :, 2] = new_mix[:, :, 1] = new_mix[:, :, 0] = incoming.astype(numpy.uint8)
     return new_mix
-
-
-def main():
-    import sys
-
-    print("PRELIMINARY SOFTWARE by Christian C. Sachs, ModSim Group, IBG-1 FZ Jülich")
-    print("Do not rely on data generated ...")
-
-    # sys.argv
-
-    if len(sys.argv) < 3:
-        print("Usage: {} <average image.png> <tabular resultfile.txt> <output.pdf>".format(sys.argv[0]))
-        return
-
-    filename = {
-        'recons': sys.argv[2],
-        'average': sys.argv[1],
-        'output': sys.argv[3]
-    }
-
-    filename = NeatDict(filename)
-    image = cv2.imread(filename.average, -1)
-    data = pandas.read_table(filename.recons, skiprows=0, header=1, sep=' ')
-
-    data.rename(columns={
-        '#amplitude(photonelectrons),': 'amp',
-        'x0(pixels),': 'x',
-        'y0(pixels),': 'y',
-        'simga_x(pixels),': 'sigma_x',
-        'sigma_y(pixels),': 'sigma_y',
-        'backgroud(photonelectrons),': 'back',
-        'z_position(pixels),': 'z',
-        'quality,': 'quality',
-        'CNR,': 'cnr',
-        'localiztion_precision_x(pixels),': 'locprec_x',
-        'localiztion_precision_y(pixels),': 'locprec_y',
-        'localiztion_precision_z(pixels),': 'locprec_z',
-        'correlation_coefficient,': 'corr_coeff',
-        'frame': 'frame'
-    }, inplace=True)
-
-    binarization = binarize_image(image)
-    cells = [contour_to_cell(contour) for contour in binarization_to_contours(binarization)]
-
-    for cell in cells:
-        get_subset_and_snippet(cell, data, image)
-        markerize_identical_emitters(cell)
-
-    print("Analyses finished")
-
-    write_pdf = True
-
-    from matplotlib.backends.backend_pdf import PdfPages
-
-    with PdfPages("%s" % (filename.output,)) as pdf:
-
-        new_contour_image = numpy.zeros_like(binarization, dtype=numpy.uint8)
-        for cell in cells:
-            cv2.drawContours(new_contour_image, [cv2.boxPoints(cell.ellipse).astype(numpy.int32)], -1, 255)
-            x, y, w, h = cv2.boundingRect(cell.hull)
-            cv2.rectangle(new_contour_image, (x, y), (x + w, y + h), 255)
-            cv2.drawContours(new_contour_image, [cell.contour], -1, 255)
-            cv2.drawContours(new_contour_image, [cell.hull], -1, 255)
-
-        f, axes = pyplot.subplots(1, 4)
-        axes[0].set_title('Preliminary')
-        axes[1].set_title('Test Software')
-        axes[2].set_title('by Christian C. Sachs')
-        axes[3].set_title('ModSim Group / IBG-1 / FZ Jülich')
-        axes[0].set_rasterization_zorder(-1)
-        axes[0].scatter(data.x, data.y, zorder=-2)
-        axes[0].imshow(image, zorder=-3)
-        axes[1].imshow(image)
-        axes[2].imshow(binarization)
-        axes[3].imshow(new_contour_image)
-        if write_pdf:
-            pdf.savefig()
-        else:
-            pyplot.show()
-        pyplot.close()
-
-        canvas = to_rgb8(image)
-        for cell in cells:
-            cv2.drawContours(canvas, [cell.hull], -1, (0, 255, 0))
-        for cell in cells:
-            cv2.putText(canvas, ". %d" % (cell.count,), tuple(map(int, cv2.minAreaRect(cell.hull)[0])),
-                        cv2.FONT_HERSHEY_PLAIN, 1, (255, 0, 0))
-
-        pyplot.title('Filtered Emitter Counts per Cell')
-        pyplot.imshow(canvas[:, :, ::-1])
-
-        if write_pdf:
-            pdf.savefig()
-        else:
-            pyplot.show()
-        pyplot.close()
-
-        for n, cell in enumerate(cells):
-            pyplot.figure(figsize=(40, 8))
-            f, axes = pyplot.subplots(1, 5)
-
-            alpha = 0.1
-
-            axes[0].set_title('Overview [scatter opacity=%.2f]' % alpha)
-            axes[0].set_rasterization_zorder(-1)
-            axes[0].scatter(cell.subset.x, cell.subset.y, alpha=alpha, zorder=-2)
-            axes[0].imshow(new_contour_image, zorder=-50)
-
-            alpha = 0.01
-
-            axes[1].set_title('Rotated Cell Image [raw emitters=%d, scatter opacity=%.2f]' % (len(cell.subset), alpha))
-            axes[1].imshow(cell.rot_snippet, zorder=-50)
-            axes[1].set_rasterization_zorder(0)
-            axes[1].scatter(cell.subset.rot_x, cell.subset.rot_y, alpha=alpha, zorder=-2)
-            axes[1].scatter(cell.sub_subset.rot_x, cell.sub_subset.rot_y, alpha=alpha, zorder=-1, color='red')
-
-            hist = numpy.histogram(cell.subset.abs_rot_x, bins=int(round(cell.subset.abs_rot_x.max())))
-            axes[2].set_title('Histogram [Count]')
-            axes[2].set_ylabel('Emitter count [#]')
-            axes[2].set_xlabel('Bin position [pixel]')
-            axes[2].plot(hist[1][:-1], hist[0])
-
-            axes[3].set_title(
-                'Rotated Cell Image [filtered emitters=%d, scatter opacity=%.2f]' % (len(cell.sub_subset), alpha))
-            axes[3].imshow(cell.rot_snippet, zorder=-50)
-            axes[3].set_rasterization_zorder(0)
-            axes[3].scatter(cell.sub_subset.rot_x, cell.sub_subset.rot_y, alpha=alpha, zorder=-1, color='red')
-
-            hist = numpy.histogram(cell.sub_subset.abs_rot_x, bins=int(round(cell.sub_subset.abs_rot_x.max())))
-            axes[4].set_title('Filtered Histogram [Count]')
-            axes[4].set_ylabel('Filtered Emitter count [#]')
-            axes[4].set_xlabel('Bin position [pixel]')
-            axes[4].plot(hist[1][:-1], hist[0])
-
-            if write_pdf:
-                pdf.savefig()
-            else:
-                pyplot.show()
-            pyplot.close()
-
-            print("Done %d/%d cells." % (n + 1, len(cells)))
-
-
-if __name__ == '__main__':
-    main()
