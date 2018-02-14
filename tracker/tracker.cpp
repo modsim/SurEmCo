@@ -11,6 +11,7 @@
 #include <new>
 
 using namespace std;
+
 /*
 void *real_new(size_t size) {
     printf("new [%zu] ", size);
@@ -40,6 +41,7 @@ void operator delete[](void *ptr) { real_delete(ptr); }
 void operator delete(void *ptr, const nothrow_t &) throw () { real_delete(ptr); }
 void operator delete[](void *ptr, const nothrow_t &) throw ()  { real_delete(ptr); }
 */
+
 #undef CLI
 
 #define WITH_KDTREE 1

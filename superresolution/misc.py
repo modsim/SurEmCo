@@ -176,12 +176,10 @@ def get_subset_and_snippet(cell, data, image, border=0.0):
         hull_to_use[:, 0, 0] += mi0
         hull_to_use[:, 0, 1] += mi1
 
-
     mask = [cv2.pointPolygonTest(hull_to_use.astype(numpy.int32), (point_x, point_y),
-        measureDist=False) >= 0 for point_x, point_y in
-            zip(subset.x, subset.y)]
+                                 measureDist=False) >= 0
+            for point_x, point_y in zip(subset.x, subset.y)]
 
-    #print(mask)
     subset = subset[mask]
 
     cell.subset = subset

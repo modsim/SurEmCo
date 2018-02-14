@@ -1,28 +1,63 @@
-import sys
+# Copyright (C) 2015-2017 Christian C. Sachs, Forschungszentrum Jülich
+#####
+"""
+512 x 512 ... 0.065 um per pixel
+2560 x 2560 ... 0.013 um per pixel
+
+
+Average ribosome diffusion rate: 0.04 +- 0.01 square micrometer per second
+assumption: all fluorescent ribosomal proteins are bound in ribosomes
+
+exposure/timing:
+50ms exposure + 36ms delay
+(exposure every 86ms)
+
+"""
+
+
+#####
+
+from yaval import Visualizer, Values, VispyPlugin
+from yaval.qt import QFileDialog
 
 import cv2
 import numpy
+import time
 import os.path
 
 from argparse import ArgumentParser
-from PySide.QtGui import QFileDialog
 from vispy.scene import visuals
 
-from yaval import Visualizer, VispyPlugin, Values
+from scipy.stats import linregress
+
 from .misc import NeatDict
 from .io import is_image_file, load_dataset, prepare_dataset
 from .misc import to_rgb8, binarize_image, contour_to_cell, binarization_to_contours, \
     get_subset_and_snippet, num_tokenize
 
+try:
+    from .tracker import Tracker
+except ImportError:
+    print("WARNING: Custom tracker not available. Was it installed correctly?")
+    Tracker = None
+
+try:
+    import trackpy
+except ImportError:
+    print("WARNING: TrackPy not installed.")
+    trackpy = None
+
 
 def create_argparser():
     parser = ArgumentParser(description="Superresolution Analyser")
 
-    parser.add_argument("files", metavar="files", type=str, nargs='*', default=[], help="input files, one must be a DIA image")
+    parser.add_argument("files", metavar="files", type=str, nargs='*', default=[],
+                        help="input files, one must be a DIA image")
     parser.add_argument("--disable-detection", dest="disable_detection", action='store_true')
     parser.add_argument("--drift-correction", dest="drift_correction", action='store_true')
     parser.add_argument("--show-unassigned", dest="show_unassigned", action='store_true')
     parser.add_argument("--add-cell-border", dest="border", type=float, default=0.0)
+    parser.add_argument("--calibration", dest="calibration", type=float, default=0.065, help="µm per pixel")
 
     return parser
 
@@ -43,6 +78,8 @@ class SuperresolutionTracking(Visualizer):
     title = "Superresolution Cell Detection & Emitter Tracking - " + \
             "by Christian C. Sachs, ModSim Group, IBG-1, FZ-Jülich - " + \
             "Preliminary software, do not rely on results!"
+
+    result_table = True
 
     def visualization(self):
         parser = create_argparser()
@@ -68,7 +105,7 @@ class SuperresolutionTracking(Visualizer):
                 tabular_files.append(filename)
 
         if average_file is None or tabular_files is []:
-            sys.exit(1)
+            raise SystemExit
 
         image = cv2.imread(average_file, -1)
 
@@ -106,7 +143,7 @@ class SuperresolutionTracking(Visualizer):
             cells = [contour_to_cell(contour) for contour in binarization_to_contours(binarization)]
 
             for cell in cells:
-                get_subset_and_snippet(cell, data, image, args.border / 0.065)  # TODO hardcoded
+                get_subset_and_snippet(cell, data, image, args.border / args.calibration)
             # markerize_identical_emitters(cell)
 
             for cell in cells:
@@ -145,10 +182,6 @@ class SuperresolutionTracking(Visualizer):
 
                 cells.append(_dummy_cell(data))
 
-
-
-
-
         # this does NOT work.
         if args.drift_correction:
             print("Drift correction")
@@ -171,8 +204,6 @@ class SuperresolutionTracking(Visualizer):
                     drift_subset[n, 2] = group.y.mean() - first_y
 
                     n += 1
-
-            from scipy.stats import linregress
 
             print("XFIT")
             xfit = linregress(drift_subset[:, 0], drift_subset[:, 1])
@@ -199,7 +230,6 @@ class SuperresolutionTracking(Visualizer):
             drift_subset[:, 1] -= drift_subset[0, 1]
             drift_subset[:, 2] -= drift_subset[0, 2]
 
-            from scipy.stats import linregress
             print("XFIT")
             xfit = linregress(drift_subset[:, 0], drift_subset[:, 1])
             print(xfit)
@@ -215,7 +245,7 @@ class SuperresolutionTracking(Visualizer):
         plugin = VispyPlugin()
         self.register_plugin(plugin)
         plugin.add_pan_zoom_camera()
-        rendered_image = plugin.add_image(canvas)
+        rendered_image = plugin.add_image(canvas[::-1, ::-1])
 
         precision_label = Values.Label('precision', "Precision: %.4f µm", 0.0)
         sigma_label = Values.Label('sigma', "Sigma: %.4f µm", 0.0)
@@ -230,7 +260,7 @@ class SuperresolutionTracking(Visualizer):
                 'custom_static_kd_locprec', 'custom_static_kd_sigma', 'trackpy'
             ], 'tracker'),
             Values.IntValue('exposure_time', 86, minimum=0, maximum=1000, unit="ms"),
-            Values.IntValue('calibration', 65, minimum=0, maximum=1000, unit="nm·pixel⁻¹"),
+            Values.IntValue('calibration', int(1000 * args.calibration), minimum=0, maximum=1000, unit="nm·pixel⁻¹"),
             Values.FloatValue('maximum_displacement', 0.195, minimum=0, maximum=20, unit="µm"),
             Values.IntValue('maximum_blink_dark', 1, minimum=0, maximum=100, unit="frame(s)"),
             Values.Action('refresh'),
@@ -347,8 +377,9 @@ class SuperresolutionTracking(Visualizer):
                 cell = cells[n]
                 subset = cell['subset']
 
-                if values.tracker == 'trackpy':
-                    import trackpy
+                before_tracking = time.time()
+
+                if values.tracker == 'trackpy' and trackpy:
                     if (
                             'trackpy_tracked' in cell and
                             'last_memory' in cell and
@@ -363,9 +394,7 @@ class SuperresolutionTracking(Visualizer):
                         cell['last_memory'] = values.maximum_blink_dark
                         cell['last_displacement'] = values.maximum_displacement
                         cell['trackpy_tracked'] = tracked
-                elif values.tracker.startswith('custom'):
-
-                    from .tracker import Tracker
+                elif values.tracker.startswith('custom') and Tracker:
 
                     tracker = Tracker()
 
@@ -441,11 +470,9 @@ class SuperresolutionTracking(Visualizer):
 
                     tracked = subset.copy()
                     tracked['particle'] = transfer['label']
-                    if hasattr(tracked, 'sort_values'):
-                        tracked = tracked.sort_values(
-                            by=['particle', 'frame'])  # check this, it does not work with older pandas!
-                    else:
-                        tracked = tracked.sort(columns=['particle', 'frame'])
+                    # expect modern pandas!
+                    tracked = tracked.sort_values(by=['particle', 'frame'])
+
 
                 # if args.drift_correction:
                 #    from trackpy import compute_drift, subtract_drift
@@ -453,6 +480,10 @@ class SuperresolutionTracking(Visualizer):
                 #    drift = compute_drift(tracked)
                 #    print(drift)
                 #    tracked = subtract_drift(drift)
+
+                after_tracking = time.time()
+
+                print("Tracking took: %.2fs" % (after_tracking-before_tracking))
 
                 # tracked
 
@@ -519,7 +550,7 @@ class SuperresolutionTracking(Visualizer):
                 _empty()
 
             if values.quit:
-                sys.exit(1)
+                raise SystemExit
 
             if values.refresh:
                 try:
@@ -543,19 +574,6 @@ class SuperresolutionTracking(Visualizer):
                         print("error in cell", n, e)
                 print("Done.")
 
-                if False:
-                    import threading
-                    threads = [threading.Thread(target=redo, args=(n,)) for n in range(len(cells))]
-                    print("*")
-                    for t in threads:
-                        t.start()
-                        print("*")
-                    for t in threads:
-                        t.join()
-                        print("*")
-
-                    print("Done.")
-
                 values.show_all = True
 
             if values.show_all:
@@ -578,3 +596,5 @@ class SuperresolutionTracking(Visualizer):
         return _update
 
 
+def main():
+    SuperresolutionTracking.run()

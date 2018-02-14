@@ -8,9 +8,11 @@ from setuptools import setup, find_packages
 from os.path import isfile, getmtime
 from subprocess import call
 
+
 def should_make(dst, src):
     src = src[0]
     return not isfile(dst) or getmtime(dst) < getmtime(src)
+
 
 GPP_OPTIONS = ['-g', '-std=c++11', '-O3', '-Itracker', '-shared']
 LINUX_OPTIONS = ['-fPIC']
@@ -28,13 +30,13 @@ if should_make('superresolution/libwinpthread-1.dll', ['/usr/x86_64-w64-mingw32/
 setup(
     name='superresolution',
     version='0.0.1+snapshot',
-    description='Superresolution Analysis Project',
-    long_description='FOR INTERNAL USE ONLY',
+    description='Superresolution Analysis Software',
+    long_description='',
     author='Christian C. Sachs',
     author_email='c.sachs@fz-juelich.de',
     url='https://github.com/modsim/superresolution-bacterial-analysis-tool',
-    packages=['superresolution'],
-    requires=['yaval', 'PySide', 'numpy', 'cv2', 'vispy', 'trackpy', 'scipy', 'pandas', 'numexpr'],
+    packages=find_packages(),
+    requires=['yaval', 'PySide2', 'numpy', 'cv2', 'vispy', 'trackpy', 'scipy', 'pandas', 'numexpr'],
     license='BSD',
     py_modules=['superresolution'],
     package_data={
@@ -50,10 +52,10 @@ setup(
         'Intended Audience :: Science/Research',
         'Operating System :: POSIX',
         'Operating System :: POSIX :: Linux',
-        'Operating System :: MacOS :: MacOS X',   # lately no tests
+        'Operating System :: MacOS :: MacOS X',
         'Operating System :: Microsoft :: Windows',
-        'Programming Language :: Python :: 3',    #
-        'Programming Language :: Python :: 3.5',  # main focus
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.5',
         'Topic :: Scientific/Engineering :: Bio-Informatics',
         'Topic :: Scientific/Engineering :: Image Recognition',
     ]
