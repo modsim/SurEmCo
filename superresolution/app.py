@@ -245,7 +245,7 @@ class SuperresolutionTracking(Visualizer):
         plugin = VispyPlugin()
         self.register_plugin(plugin)
         plugin.add_pan_zoom_camera()
-        rendered_image = plugin.add_image(canvas[::-1, ::-1])
+        rendered_image = plugin.add_image(canvas)
 
         precision_label = Values.Label('precision', "Precision: %.4f µm", 0.0)
         sigma_label = Values.Label('sigma', "Sigma: %.4f µm", 0.0)
