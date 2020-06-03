@@ -118,7 +118,7 @@ def binarize_image(image):
 
 
 def binarization_to_contours(binarization, minimum_area=100, maximum_area=10000):
-    _, contours, hierarchy = cv2.findContours(binarization.astype(numpy.uint8), cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+    contours, hierarchy = cv2.findContours(binarization.astype(numpy.uint8), cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
     return [contour for contour in contours if minimum_area < cv2.contourArea(contour) < maximum_area]
 
 
