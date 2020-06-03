@@ -532,8 +532,11 @@ class SuperresolutionTracking(Visualizer):
                 result_table[n]["Mean Loc Precision (µm)"] = subset.locprec.mean() * micron_per_pixel
                 result_table[n]["Mean Loc Sigma (µm)"] = subset.sigma.mean() * micron_per_pixel
 
-                smaller_axis = min(*cell.ellipse[1])
-                larger_axis = max(*cell.ellipse[1])
+                try:
+                    smaller_axis = min(*cell.ellipse[1])
+                    larger_axis = max(*cell.ellipse[1])
+                except TypeError:
+                    smaller_axis = larger_axis = 0.0
 
                 result_table[n]["Ellipse small (µm)"] = smaller_axis * micron_per_pixel
                 result_table[n]["Ellipse long (µm)"] = larger_axis * micron_per_pixel
