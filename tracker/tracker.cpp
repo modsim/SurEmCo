@@ -3,6 +3,7 @@
 #include <sstream>
 #include <set>
 #include <algorithm>
+#include <numeric>
 #include <vector>
 #include <cstring>
 #include <iterator>
