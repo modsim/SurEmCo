@@ -59,6 +59,7 @@ def create_argparser():
     parser.add_argument("--show-unassigned", dest="show_unassigned", action='store_true')
     parser.add_argument("--add-cell-border", dest="border", type=float, default=0.0)
     parser.add_argument("--calibration", dest="calibration", type=float, default=0.065, help="µm per pixel")
+    parser.add_argument("--keep-order", dest="keep_order", action='store_true')
 
     return parser
 
