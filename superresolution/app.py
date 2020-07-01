@@ -518,9 +518,10 @@ class SuperresolutionTracking(Visualizer):
                 lines.update()
                 meshes.update()
 
-                plugin.add_turntable_camera()
-                plugin.view.camera.depth_value = 1e9
-                plugin.view.camera.fov = 0.0
+                if 'Turntable' not in type(plugin.view.camera).__name__:
+                    plugin.add_turntable_camera()
+                    plugin.view.camera.depth_value = 1e9
+                    plugin.view.camera.fov = 0.0
 
                 result_table[n]["Max Displacement (µm)"] = values.maximum_displacement
                 result_table[n]["Max Dark (frames)"] = values.maximum_blink_dark
@@ -570,9 +571,10 @@ class SuperresolutionTracking(Visualizer):
             if values._modified == 'image_display_frame':
                 return
 
-            if values.refresh:
+            if values.refresh or values.live == 1:
+                n = int(values.cell.split(' ')[0])
                 try:
-                    redo(int(values.cell.split(' ')[0]))
+                    redo(n)
                 except Exception as e:
                     print("error in cell", n, e)
 
@@ -584,7 +586,7 @@ class SuperresolutionTracking(Visualizer):
                     calc_diff(n)
                 print("Done.")
 
-            if values.analyse_all or (values.tracker.startswith('custom') and values.live == 1):
+            if values.analyse_all:  # or (values.tracker.startswith('custom') and values.live == 1):
                 for n in range(len(cells)):
                     try:
                         redo(n)
