@@ -142,11 +142,11 @@ class SuperresolutionTracking(Visualizer):
 
             # markerize_identical_emitters(cell)
 
-            for cell in cells:
-                cv2.drawContours(canvas, [cell['hull']], -1, (0, 255, 0))
-            for n, cell in enumerate(cells):
-                cv2.putText(canvas, "%d" % (n,), tuple(map(int, cv2.minAreaRect(cell['hull'])[0])),
-                            cv2.FONT_HERSHEY_PLAIN, 1, (255, 0, 0))
+            # for cell in cells:
+            #     cv2.drawContours(canvas, [cell.hull], -1, (0, 255, 0))
+            # for n, cell in enumerate(cells):
+            #     cv2.putText(canvas, "%d" % (n,), tuple(map(int, cv2.minAreaRect(cell.hull)[0])),
+            #                 cv2.FONT_HERSHEY_PLAIN, 1, (255, 0, 0))
 
             if len(cells) == 0:
                 print(
@@ -264,9 +264,32 @@ class SuperresolutionTracking(Visualizer):
 
         scatter = visuals.Markers()
         lines = visuals.Line()
+        meshes = visuals.Mesh()
 
         plugin.view.add(scatter)
         plugin.view.add(lines)
+        plugin.view.add(meshes)
+
+        for n, cell in enumerate(cells):
+
+            if not cell.hull.size:
+                continue
+
+            cell.contour_line = visuals.Line(pos=np.array([(x, y, -0.5) for x, y in cell.render_hull]),
+                                             color=(0.0, 1.0, 0.0, 1.0), width=5)
+            cell.contour_line_bordered = visuals.Line(pos=np.array([(x, y, -0.5) for x, y in cell.render_hull_bordered]),
+                                             color=(0.0, 0.0, 1.0, 1.0), width=5)
+
+            plugin.view.add(cell.contour_line)
+            plugin.view.add(cell.contour_line_bordered)
+
+            center = cv2.minAreaRect(cell.hull)[0]
+
+            cell.text = visuals.Text(text='%d' % n, color=(1, 0, 0, 1), pos=np.array((center[0], center[1], 0.5)))
+
+            plugin.view.add(cell.text)
+
+            cell.render_mesh = contour_to_mesh(cell.contour, 0, maximum_frame)  # subset.frame.min(), subset.frame.max())
 
         result_table = [{} for _ in range(len(cells))]
 
@@ -489,10 +512,15 @@ class SuperresolutionTracking(Visualizer):
                 scatter.set_data(render_data, edge_color=None, face_color=(1, 1, 1, 0.5), size=5)
                 lines.set_data(render_data, color=(1, 1, 1, 0.5), connect=conn)
 
+                meshes.set_data(cell.render_mesh, color=(1, 1, 1, 0.25))
+
                 scatter.update()
                 lines.update()
+                meshes.update()
 
-                plugin.view.camera = 'turntable'
+                plugin.add_turntable_camera()
+                plugin.view.camera.depth_value = 1e9
+                plugin.view.camera.fov = 0.0
 
                 result_table[n]["Max Displacement (µm)"] = values.maximum_displacement
                 result_table[n]["Max Dark (frames)"] = values.maximum_blink_dark
@@ -566,20 +594,34 @@ class SuperresolutionTracking(Visualizer):
 
                 values.show_all = True
 
+            if ('Everything' in values.cell) or ('Unassigned' in values.cell):
+                values.show_all = False
+
             if values.show_all:
 
                 try:
 
                     render_data = np.concatenate(
                         [cell.render_data for cell in cells if cell.render_data is not None])
+                    colors = np.random.random((len(render_data), 4))
+                    colors = (1, 1, 1, 0.5)
+                    scatter.set_data(render_data, edge_color=None, face_color=colors, size=5)
+                    scatter.update()
+
                     render_conn = np.concatenate(
                         [cell.render_conn for cell in cells if cell.render_conn is not None])
-
-                    scatter.set_data(render_data, edge_color=None, face_color=(1, 1, 1, 0.5), size=5)
                     lines.set_data(render_data, color=(1, 1, 1, 0.5), connect=render_conn)
-
-                    scatter.update()
                     lines.update()
+
+                except ValueError:
+                    pass
+
+            if values.show_all or ('Everything' in values.cell) or ('Unassigned' in values.cell):
+                try:
+                    render_mesh = np.concatenate(
+                        [cell.render_mesh for cell in cells if cell.render_mesh is not None])
+                    meshes.set_data(render_mesh, color=(1, 1, 1, 0.25))
+                    meshes.update()
                 except ValueError:
                     pass
 
