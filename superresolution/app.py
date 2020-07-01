@@ -21,7 +21,7 @@ from yaval import Visualizer, Values, VispyPlugin
 from yaval.qt import QFileDialog
 
 import cv2
-import numpy
+import numpy as np
 import time
 import os.path
 
@@ -161,7 +161,7 @@ class SuperresolutionTracking(Visualizer):
                 cells = [_dummy_cell(data)]
 
             if args.show_unassigned:
-                mask = numpy.ones(len(data), dtype=bool)
+                mask = np.ones(len(data), dtype=bool)
 
                 acc = 0
                 print(len(mask))
@@ -170,7 +170,7 @@ class SuperresolutionTracking(Visualizer):
                     print(cell.subset)
                     print(cell.subset.original_index)
                     mask[cell.subset.original_index] = False
-                    print(numpy.sum(mask))
+                    print(np.sum(mask))
 
                 print(acc)
 
@@ -189,7 +189,7 @@ class SuperresolutionTracking(Visualizer):
             groups_groups = [cell.subset.groupby(by='frame') for cell in cells]
 
             n = 0
-            drift_subset = numpy.zeros((sum(len(g) for g in groups_groups), 3))
+            drift_subset = np.zeros((sum(len(g) for g in groups_groups), 3))
 
             for groups in groups_groups:
 
@@ -220,7 +220,7 @@ class SuperresolutionTracking(Visualizer):
 
         if False and args.drift_correction:
             intermediate = data.groupby('frame')
-            drift_subset = numpy.zeros((len(intermediate), 3))
+            drift_subset = np.zeros((len(intermediate), 3))
 
             for n, (frame, g) in enumerate(intermediate):
                 drift_subset[n, 0] = frame
@@ -349,26 +349,26 @@ class SuperresolutionTracking(Visualizer):
 
                 # for pid, trajectory in tracked.groupby('particle'):
                 #    msd = trackpy.msd(trajectory, micron_per_pixel, frames_per_second)
-                #    pylab.plot(numpy.array(msd.index), numpy.array(msd))
+                #    pylab.plot(np.array(msd.index), np.array(msd))
 
                 # imsd = trackpy.imsd(tracked, micron_per_pixel, frames_per_second)
                 # print(imsd)
 
                 emsd = trackpy.emsd(tracked, micron_per_pixel, frames_per_second)
                 cell['emsd'] = emsd
-                lagt = numpy.array(emsd.index)
-                msd = numpy.array(emsd)
+                lagt = np.array(emsd.index)
+                msd = np.array(emsd)
 
                 dimensionality = 2  # we can observe only two dimensions, then it should be two?
 
-                D = numpy.array(msd / (lagt * 2 * dimensionality))
+                D = np.array(msd / (lagt * 2 * dimensionality))
 
                 result_table[n]["D"] = D.mean()  # [0]
                 # result_table[n]["D_MSD"] = msd[0]
                 # result_table[n]["D_LAGT"] = lagt[0]
 
                 # print("Cell", n)
-                # print(numpy.c_[lagt, msd, D])
+                # print(np.c_[lagt, msd, D])
 
                 self.output_model.update_data(result_table)
 
@@ -426,16 +426,16 @@ class SuperresolutionTracking(Visualizer):
                     tracker.track(transfer, values.maximum_displacement / micron_per_pixel, values.maximum_blink_dark,
                                   mode, strategy)
 
-                    # numpy.save("_tmp.npy", transfer)
+                    # np.save("_tmp.npy", transfer)
 
                     def my_emsd(data):
                         maxframe = 0
                         tracks = []
-                        for label in sorted(numpy.unique(data['label'])):
+                        for label in sorted(np.unique(data['label'])):
                             trace = data[data['label'] == label].copy()
                             if len(trace) == 1:
                                 continue
-                            trace = numpy.sort(trace, order='frame')
+                            trace = np.sort(trace, order='frame')
                             relframe = trace['frame'].copy()
                             relframe -= relframe.min()
                             relframemax = relframe.max()
@@ -443,24 +443,24 @@ class SuperresolutionTracking(Visualizer):
                                 maxframe = relframemax
                             tracks.append((trace, relframe))
 
-                        result = numpy.ones((len(tracks), maxframe + 1)) * float('nan')
+                        result = np.ones((len(tracks), maxframe + 1)) * float('nan')
 
                         for n, (trace, relframe) in enumerate(tracks):
                             for m, sqd in zip(relframe, trace['square_displacement']):
                                 result[n, m] = sqd
 
-                        y = numpy.nanmean(result, axis=0)
+                        y = np.nanmean(result, axis=0)
 
-                        x = numpy.linspace(0, len(y) - 1, len(y))
+                        x = np.linspace(0, len(y) - 1, len(y))
 
-                        Q = numpy.c_[x / frames_per_second, (y * (micron_per_pixel ** 2))][1:, :]
+                        Q = np.c_[x / frames_per_second, (y * (micron_per_pixel ** 2))][1:, :]
 
                         lagt = Q[:, 0]
                         msd = Q[:, 1]
 
                         dimensionality = 2  # we can observe only two dimensions, then it should be two?
 
-                        D = numpy.array(msd / (lagt * 2 * dimensionality))
+                        D = np.array(msd / (lagt * 2 * dimensionality))
                         return D, Q
 
                     # D, Q = my_emsd(transfer)
@@ -490,9 +490,9 @@ class SuperresolutionTracking(Visualizer):
                 cell['tracked'] = tracked
 
                 subset = tracked
-                conn = numpy.array(tracked.particle, dtype=numpy.uint32)
+                conn = np.array(tracked.particle, dtype=np.uint32)
 
-                nconn = numpy.zeros(len(conn), dtype=numpy.bool)
+                nconn = np.zeros(len(conn), dtype=np.bool)
 
                 nconn[:-1] = conn[:-1] == conn[1:]
 
@@ -500,7 +500,7 @@ class SuperresolutionTracking(Visualizer):
 
                 # subset = data
 
-                render_data = numpy.c_[subset.x, subset.y, subset.frame]
+                render_data = np.c_[subset.x, subset.y, subset.frame]
 
                 cell['render_data'] = render_data
                 cell['render_conn'] = conn
@@ -583,9 +583,9 @@ class SuperresolutionTracking(Visualizer):
 
                 try:
 
-                    render_data = numpy.concatenate(
+                    render_data = np.concatenate(
                         [cell['render_data'] for cell in cells if cell['render_data'] is not None])
-                    render_conn = numpy.concatenate(
+                    render_conn = np.concatenate(
                         [cell['render_conn'] for cell in cells if cell['render_conn'] is not None])
 
                     scatter.set_data(render_data, edge_color=None, face_color=(1, 1, 1, 0.5), size=5)

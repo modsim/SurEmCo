@@ -1,6 +1,6 @@
 import re
 
-import numpy
+import numpy as np
 import numexpr
 import cv2
 
@@ -46,7 +46,7 @@ get_integral_image_and_squared = _cv2_get_integral_image_and_squared
 
 
 def means_and_stddev(image, wr=15):
-    enlarged = numpy.zeros((image.shape[0] + 2 * wr, image.shape[1] + 2 * wr), numpy.double)
+    enlarged = np.zeros((image.shape[0] + 2 * wr, image.shape[1] + 2 * wr), np.double)
 
     enlarged[wr:-wr, wr:-wr] = image
     enlarged[0:wr] = enlarged[wr + 1, :]
@@ -62,7 +62,7 @@ def means_and_stddev(image, wr=15):
         B = mat[2 * wr:, 2 * wr:]
         C = mat[:-2 * wr, 2 * wr:]
         D = mat[2 * wr:, :-2 * wr]
-        return numexpr.evaluate("(A + B) - (C + D)").astype(numpy.float32)
+        return numexpr.evaluate("(A + B) - (C + D)").astype(np.float32)
 
     sums = calc_sums(ints)
     sumss = calc_sums(intss)
@@ -71,7 +71,7 @@ def means_and_stddev(image, wr=15):
 
     means = sums / area
 
-    # stddev = numpy.sqrt(sumss / area - means ** 2)
+    # stddev = np.sqrt(sumss / area - means ** 2)
 
     stddev = numexpr.evaluate("sqrt(sumss / area - means ** 2)")
 
@@ -118,7 +118,7 @@ def binarize_image(image):
 
 
 def binarization_to_contours(binarization, minimum_area=100, maximum_area=10000):
-    contours, hierarchy = cv2.findContours(binarization.astype(numpy.uint8), cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+    contours, hierarchy = cv2.findContours(binarization.astype(np.uint8), cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
     return [contour for contour in contours if minimum_area < cv2.contourArea(contour) < maximum_area]
 
 
@@ -135,7 +135,7 @@ def contour_to_cell(contour):
 def get_subset_and_snippet(cell, data, image, border=0.0):
     x, y, w, h = cell.bb
 
-    longest_edge = round(numpy.sqrt(w ** 2.0 + h ** 2.0))
+    longest_edge = round(np.sqrt(w ** 2.0 + h ** 2.0))
     w_d = longest_edge
     h_d = longest_edge
     x -= w_d // 2
@@ -156,7 +156,7 @@ def get_subset_and_snippet(cell, data, image, border=0.0):
     hull_to_use = cell.hull
 
     if border > 0.0:
-        hull_to_use = hull_to_use.astype(numpy.float32)
+        hull_to_use = hull_to_use.astype(np.float32)
 
         mi0, mi1 = hull_to_use[:, 0, 0].min(), hull_to_use[:, 0, 1].min()
         hull_to_use[:, 0, 0] -= mi0
@@ -176,7 +176,7 @@ def get_subset_and_snippet(cell, data, image, border=0.0):
         hull_to_use[:, 0, 0] += mi0
         hull_to_use[:, 0, 1] += mi1
 
-    mask = [cv2.pointPolygonTest(hull_to_use.astype(numpy.int32), (point_x, point_y),
+    mask = [cv2.pointPolygonTest(hull_to_use.astype(np.int32), (point_x, point_y),
                                  measureDist=False) >= 0
             for point_x, point_y in zip(subset.x, subset.y)]
 
@@ -193,14 +193,14 @@ def get_subset_and_snippet(cell, data, image, border=0.0):
     #
     # cell.snippet = image[int(y):int(y + h), int(x):int(x + w)]
     #
-    # corr_angle = numpy.deg2rad(-angle + 90)
+    # corr_angle = np.deg2rad(-angle + 90)
     # mid_x, mid_y = (0.5 * w), (0.5 * h)
-    # subset['rot_x'] = (subset.new_x - mid_x) * numpy.cos(corr_angle) - (subset.new_y - mid_y) * numpy.sin(
+    # subset['rot_x'] = (subset.new_x - mid_x) * np.cos(corr_angle) - (subset.new_y - mid_y) * np.sin(
     #     corr_angle) + mid_x
-    # subset['rot_y'] = (subset.new_y - mid_y) * numpy.cos(corr_angle) + (subset.new_x - mid_x) * numpy.sin(
+    # subset['rot_y'] = (subset.new_y - mid_y) * np.cos(corr_angle) + (subset.new_x - mid_x) * np.sin(
     #     corr_angle) + mid_y
     #
-    # cell.rot_snippet = rotate_image(cell.snippet, numpy.rad2deg(-corr_angle))
+    # cell.rot_snippet = rotate_image(cell.snippet, np.rad2deg(-corr_angle))
     #
     # subset['abs_rot_x'] = subset.rot_x - subset.rot_x.min()
     # subset['abs_rot_y'] = subset.rot_y - subset.rot_y.min()
@@ -211,8 +211,8 @@ def markerize_identical_emitters(cell):
 
     # subset.sort_values(by='x')
 
-    xy, precision, frame = numpy.c_[numpy.array(cell.subset.x), numpy.array(cell.subset.y)], numpy.array(
-        cell.subset.locprec_x), numpy.array(cell.subset.frame)
+    xy, precision, frame = np.c_[np.array(cell.subset.x), np.array(cell.subset.y)], np.array(
+        cell.subset.locprec_x), np.array(cell.subset.frame)
 
     marker = [-1] * len(xy)
 
@@ -224,7 +224,7 @@ def markerize_identical_emitters(cell):
 
         marker[pnum] = pnum
 
-        delta = precision[pnum] + numpy.finfo(float).eps
+        delta = precision[pnum] + np.finfo(float).eps
         result = tree.query_ball_point(point, delta)
         for idx in result:
             if marker[idx] != -1:
@@ -233,7 +233,7 @@ def markerize_identical_emitters(cell):
                 pass
             marker[idx] = pnum
 
-    cell.count = len(numpy.unique(marker))
+    cell.count = len(np.unique(marker))
     cell.marker = marker
 
     new = [False] * len(xy)
@@ -245,14 +245,14 @@ def markerize_identical_emitters(cell):
     cell.sub_subset = cell.subset[new]
 
     # print(len(marker))
-    # print(len(numpy.unique(marker)))
+    # print(len(np.unique(marker)))
 
 
 def to_rgb8(image):
-    new_mix = numpy.zeros(image.shape + (3,), dtype=numpy.uint8)
+    new_mix = np.zeros(image.shape + (3,), dtype=np.uint8)
     incoming = image.astype(float)
     incoming -= incoming.min()
     incoming /= incoming.max()
     incoming *= 255
-    new_mix[:, :, 2] = new_mix[:, :, 1] = new_mix[:, :, 0] = incoming.astype(numpy.uint8)
+    new_mix[:, :, 2] = new_mix[:, :, 1] = new_mix[:, :, 0] = incoming.astype(np.uint8)
     return new_mix
