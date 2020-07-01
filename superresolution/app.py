@@ -28,6 +28,7 @@ import os.path
 
 from argparse import ArgumentParser
 from vispy.scene import visuals
+from vispy.visuals.transforms import STTransform
 
 from scipy.stats import linregress
 
@@ -250,6 +251,7 @@ class SuperresolutionTracking(Visualizer):
             Values.IntValue('calibration', int(1000 * args.calibration), minimum=0, maximum=1000, unit="nm·pixel⁻¹"),
             Values.FloatValue('maximum_displacement', 0.195, minimum=0, maximum=20, unit="µm"),
             Values.IntValue('maximum_blink_dark', 1, minimum=0, maximum=100, unit="frame(s)"),
+            Values.IntValue('image_display_frame', 0, minimum=0, maximum=maximum_frame, unit="frame"),
             Values.Action('refresh'),
             Values.Action('show_all'),
             Values.Action('analyse_all'),
@@ -533,6 +535,12 @@ class SuperresolutionTracking(Visualizer):
 
             if values.quit:
                 raise SystemExit
+
+            rendered_image.transform = STTransform(translate=(0.0, 0.0, values.image_display_frame))
+            rendered_image.update()
+
+            if values._modified == 'image_display_frame':
+                return
 
             if values.refresh:
                 try:
