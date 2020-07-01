@@ -22,6 +22,7 @@ from yaval.qt import QFileDialog
 
 import cv2
 import numpy as np
+import pandas as pd
 import time
 import os.path
 
@@ -114,25 +115,26 @@ class SuperresolutionTracking(Visualizer):
 
         datasets = []
 
-        for tabular_file in sorted(tabular_files, key=num_tokenize):
+        maximum_frame = 0
+
+        for tabular_file in (tabular_files if args.keep_order else sorted(tabular_files, key=num_tokenize)):
             print("Reading %s" % (tabular_file,))
 
             local_data = load_dataset(tabular_file)
             local_data = prepare_dataset(local_data)
 
+            local_data.frame += maximum_frame
+
             datasets.append(local_data)
 
-        data = datasets[0]
-        for local_data in datasets[1:]:
-            maximum_frame = data.frame.max()
+            maximum_frame = local_data.frame.max() + 1
 
-            local_data.frame += maximum_frame + 1  # frame starts at 0 so we add 1
-            data = data.append(local_data)
+        data = pd.concat(datasets)
+        data.reset_index(inplace=True)
+        data['original_index'] = data.index.copy()
+        maximum_frame = data.frame.max()
 
-        data.reindex()
-        data['original_index'] = data.index
-
-        print("Last frame is %d" % (data.frame.max(),))
+        print("Last frame is %d" % (maximum_frame,))
 
         canvas = to_rgb8(image)
 
@@ -163,21 +165,13 @@ class SuperresolutionTracking(Visualizer):
             if args.show_unassigned:
                 mask = np.ones(len(data), dtype=bool)
 
-                acc = 0
-                print(len(mask))
                 for cell in cells:
-                    acc += len(cell.subset)
-                    print(cell.subset)
-                    print(cell.subset.original_index)
                     mask[cell.subset.original_index] = False
-                    print(np.sum(mask))
-
-                print(acc)
 
                 remainder = data[mask]
+
                 del mask
 
-                print(len(remainder))
                 cells.append(_dummy_cell(remainder))
 
                 cells.append(_dummy_cell(data))
