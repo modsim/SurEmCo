@@ -1,4 +1,5 @@
 import re
+from itertools import chain
 
 import numpy as np
 import numexpr
@@ -256,3 +257,54 @@ def to_rgb8(image):
     incoming *= 255
     new_mix[:, :, 2] = new_mix[:, :, 1] = new_mix[:, :, 0] = incoming.astype(np.uint8)
     return new_mix
+
+
+class Cell:
+    def __init__(self, subset=None, contour=None, name=''):
+        if contour is None:
+            contour = []
+
+            self.contour = contour
+            self.hull = np.array([])
+            self.ellipse = [0.0, 0.0]
+            self.bb = [0.0, 0.0, 0.0, 0.0]
+        else:
+            self.contour = contour
+            self.hull = cv2.convexHull(contour)
+
+            self.ellipse = cv2.fitEllipse(self.hull)
+            self.bb = cv2.boundingRect(self.hull)
+
+        self.subset = subset
+
+        self.name = name
+
+        self.render_data = None
+        self.render_conn = None
+        self.render_mesh = None
+
+        self.tracked = None
+        self.emsd = None
+
+
+def contour_to_mesh(contour, frame_min, frame_max):
+    if len(contour) == 0:
+        return np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]])
+
+    mesh_data = []
+
+    for point_a, point_b in chain(
+            zip(contour[:, 0, :], contour[1:, 0, :]),
+            [(contour[-1, 0, :], contour[0, 0, :])]
+    ):
+        mesh_data.append([point_a[0], point_a[1], frame_min])
+        mesh_data.append([point_a[0], point_a[1], frame_max])
+        mesh_data.append([point_b[0], point_b[1], frame_min])
+
+        mesh_data.append([point_b[0], point_b[1], frame_min])
+        mesh_data.append([point_b[0], point_b[1], frame_max])
+        mesh_data.append([point_a[0], point_a[1], frame_max])
+
+    mesh_data = np.array(mesh_data)
+
+    return mesh_data

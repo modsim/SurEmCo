@@ -31,10 +31,9 @@ from vispy.scene import visuals
 
 from scipy.stats import linregress
 
-from .misc import NeatDict
 from .io import is_image_file, load_dataset, prepare_dataset
-from .misc import to_rgb8, binarize_image, contour_to_cell, binarization_to_contours, \
-    get_subset_and_snippet, num_tokenize
+from .misc import Cell, to_rgb8, binarize_image, binarization_to_contours, get_subset_and_snippet, num_tokenize, \
+    contour_to_mesh
 
 try:
     from .tracker import Tracker
@@ -62,18 +61,6 @@ def create_argparser():
     parser.add_argument("--keep-order", dest="keep_order", action='store_true')
 
     return parser
-
-
-def _dummy_cell(data):
-    cell = NeatDict()
-    cell.contour = []
-    cell.hull = []
-
-    cell.ellipse = [0.0, 0.0]
-    cell.bb = [0.0, 0.0, 0.0, 0.0]
-
-    cell.subset = data
-    return cell
 
 
 class SuperresolutionTracking(Visualizer):
@@ -140,10 +127,14 @@ class SuperresolutionTracking(Visualizer):
         canvas = to_rgb8(image)
 
         if args.disable_detection:
-            cells = [_dummy_cell(data)]
+            cells = [Cell(subset=data)]
         else:
             binarization = binarize_image(image)
-            cells = [contour_to_cell(contour) for contour in binarization_to_contours(binarization)]
+            cells = [Cell(contour=contour) for contour in binarization_to_contours(binarization)]
+
+            # label them
+            for n, cell in enumerate(cells):
+                cell.name = '%d Cell' % n
 
             for cell in cells:
                 get_subset_and_snippet(cell, data, image, args.border / args.calibration)
@@ -161,7 +152,7 @@ class SuperresolutionTracking(Visualizer):
                     " Falling back to whole image as ROI"
                 )
 
-                cells = [_dummy_cell(data)]
+                cells = [Cell(subset=data, name='0 Everything')]
 
             if args.show_unassigned:
                 mask = np.ones(len(data), dtype=bool)
@@ -173,9 +164,9 @@ class SuperresolutionTracking(Visualizer):
 
                 del mask
 
-                cells.append(_dummy_cell(remainder))
+                cells.append(Cell(subset=remainder, name='%d Unassigned' % len(cells)))
 
-                cells.append(_dummy_cell(data))
+                cells.append(Cell(subset=data, name='%d Everything' % len(cells)))
 
         # this does NOT work.
         if args.drift_correction:
@@ -249,7 +240,7 @@ class SuperresolutionTracking(Visualizer):
             precision_label,
             sigma_label,
             Values.ListValue(None, [0, 1], 'live'),
-            Values.ListValue(None, list(range(len(cells))), 'cell'),
+            Values.ListValue(None, [cell.name for cell in cells], 'cell'),
             Values.ListValue(None, [
                 'custom_moving_brute', 'custom_moving_kd', 'custom_static_brute_locprec', 'custom_static_brute_sigma',
                 'custom_static_kd_locprec', 'custom_static_kd_sigma', 'trackpy'
@@ -277,14 +268,6 @@ class SuperresolutionTracking(Visualizer):
         result_table = [{} for _ in range(len(cells))]
 
         def _empty():
-
-            for cell in cells:
-                cell['render_data'] = None
-                cell['render_conn'] = None
-
-                cell['tracked'] = None
-                cell['emsd'] = None
-
             for n, result in enumerate(result_table):
                 result.update({
                     "Cell #": str(n),
@@ -327,7 +310,7 @@ class SuperresolutionTracking(Visualizer):
 
                 cell = cells[n]
 
-                tracked = cell['tracked']
+                tracked = cell.tracked
 
                 # had some discussions with slavko
                 # if False:
@@ -350,7 +333,7 @@ class SuperresolutionTracking(Visualizer):
                 # print(imsd)
 
                 emsd = trackpy.emsd(tracked, micron_per_pixel, frames_per_second)
-                cell['emsd'] = emsd
+                cell.emsd = emsd
                 lagt = np.array(emsd.index)
                 msd = np.array(emsd)
 
@@ -370,7 +353,7 @@ class SuperresolutionTracking(Visualizer):
             def redo(n):
 
                 cell = cells[n]
-                subset = cell['subset']
+                subset = cell.subset
 
                 before_tracking = time.time()
 
@@ -378,17 +361,17 @@ class SuperresolutionTracking(Visualizer):
                     if (
                             'trackpy_tracked' in cell and
                             'last_memory' in cell and
-                            cell['last_memory'] == values.maximum_blink_dark and
+                            cell.last_memory == values.maximum_blink_dark and
                             'last_displacement' in cell and
-                            cell['last_displacement'] == values.maximum_displacement
+                            cell.last_displacement == values.maximum_displacement
                     ):
-                        tracked = cell['trackpy_tracked']
+                        tracked = cell.trackpy_tracked
                     else:
                         tracked = trackpy.link_df(subset, values.maximum_displacement / micron_per_pixel,
                                                   memory=values.maximum_blink_dark, link_strategy='nonrecursive')
-                        cell['last_memory'] = values.maximum_blink_dark
-                        cell['last_displacement'] = values.maximum_displacement
-                        cell['trackpy_tracked'] = tracked
+                        cell.last_memory = values.maximum_blink_dark
+                        cell.last_displacement = values.maximum_displacement
+                        cell.trackpy_tracked = tracked
                 elif values.tracker.startswith('custom') and Tracker:
 
                     tracker = Tracker()
@@ -482,7 +465,7 @@ class SuperresolutionTracking(Visualizer):
 
                 # tracked
 
-                cell['tracked'] = tracked
+                cell.tracked = tracked
 
                 subset = tracked
                 conn = np.array(tracked.particle, dtype=np.uint32)
@@ -497,8 +480,8 @@ class SuperresolutionTracking(Visualizer):
 
                 render_data = np.c_[subset.x, subset.y, subset.frame]
 
-                cell['render_data'] = render_data
-                cell['render_conn'] = conn
+                cell.render_data = render_data
+                cell.render_conn = conn
 
                 scatter.set_data(render_data, edge_color=None, face_color=(1, 1, 1, 0.5), size=5)
                 lines.set_data(render_data, color=(1, 1, 1, 0.5), connect=conn)
@@ -552,7 +535,7 @@ class SuperresolutionTracking(Visualizer):
 
             if values.refresh:
                 try:
-                    redo(values.cell)
+                    redo(int(values.cell.split(' ')[0]))
                 except Exception as e:
                     print("error in cell", n, e)
 
@@ -579,9 +562,9 @@ class SuperresolutionTracking(Visualizer):
                 try:
 
                     render_data = np.concatenate(
-                        [cell['render_data'] for cell in cells if cell['render_data'] is not None])
+                        [cell.render_data for cell in cells if cell.render_data is not None])
                     render_conn = np.concatenate(
-                        [cell['render_conn'] for cell in cells if cell['render_conn'] is not None])
+                        [cell.render_conn for cell in cells if cell.render_conn is not None])
 
                     scatter.set_data(render_data, edge_color=None, face_color=(1, 1, 1, 0.5), size=5)
                     lines.set_data(render_data, color=(1, 1, 1, 0.5), connect=render_conn)
