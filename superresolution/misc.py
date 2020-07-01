@@ -123,17 +123,7 @@ def binarization_to_contours(binarization, minimum_area=100, maximum_area=10000)
     return [contour for contour in contours if minimum_area < cv2.contourArea(contour) < maximum_area]
 
 
-def contour_to_cell(contour):
-    cell = NeatDict()
-    cell.contour = contour
-    cell.hull = cv2.convexHull(contour)
-
-    cell.ellipse = cv2.fitEllipse(cell.hull)
-    cell.bb = cv2.boundingRect(cell.hull)
-    return cell
-
-
-def get_subset_and_snippet(cell, data, image, border=0.0):
+def get_subset_and_snippet(cell, data, border=0.0):
     x, y, w, h = cell.bb
 
     longest_edge = round(np.sqrt(w ** 2.0 + h ** 2.0))
@@ -152,7 +142,7 @@ def get_subset_and_snippet(cell, data, image, border=0.0):
     w += 2 * border
     h += 2 * border
 
-    subset = data.query('@x < x < (@x+@w) and @y < y < (@y+@h)')
+    subset = data.query('@x <= x <= (@x+@w) and @y <= y <= (@y+@h)')
 
     hull_to_use = cell.hull
 
@@ -177,9 +167,11 @@ def get_subset_and_snippet(cell, data, image, border=0.0):
         hull_to_use[:, 0, 0] += mi0
         hull_to_use[:, 0, 1] += mi1
 
+    cell.render_hull = cell.hull[:, 0, :]
+    cell.render_hull_bordered = hull_to_use[:, 0, :]
+
     mask = [cv2.pointPolygonTest(hull_to_use.astype(np.int32), (point_x, point_y),
-                                 measureDist=False) >= 0
-            for point_x, point_y in zip(subset.x, subset.y)]
+                                 measureDist=False) >= 0 for point_x, point_y in zip(subset.x, subset.y)]
 
     subset = subset[mask]
 

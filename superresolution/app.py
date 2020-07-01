@@ -137,7 +137,8 @@ class SuperresolutionTracking(Visualizer):
                 cell.name = '%d Cell' % n
 
             for cell in cells:
-                get_subset_and_snippet(cell, data, image, args.border / args.calibration)
+                get_subset_and_snippet(cell, data, args.border / args.calibration)
+
             # markerize_identical_emitters(cell)
 
             for cell in cells:
