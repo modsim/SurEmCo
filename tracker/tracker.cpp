@@ -469,6 +469,10 @@ template<typename FT> ostream& print_vector(ostream &os, const vector<FT>& e) {
 
 typedef dataset<double, size_t> dataset_type;
 
+extern "C" const char *getBuildDate() {
+    return __DATE__ " " __TIME__;
+}
+
 extern "C" void track(dataset_type::emitter *input_data, size_t count, float max_distance, int memory, int mode, int strategy) {
 
     dataset_type data;

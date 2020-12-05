@@ -22,7 +22,7 @@ class Tracker(object):
         ('square_displacement', 'float64')
     ]}
 
-    debug = True
+    debug = False
 
     msd = None
     track = None
@@ -61,6 +61,10 @@ class Tracker(object):
         self._track = _track_so.track
         self._msd = _track_so.msd
 
+        if self.debug:
+            _track_so.getBuildDate.restype = ctypes.c_char_p
+            print("Loaded %s compiled at %s" % (_track_so._name, _track_so.getBuildDate().decode(),))
+
     def track(self, transfer, maximum_displacement=1.0, memory=0, mode=None, strategy=None):
         if mode is None:
             mode = self.TRACKING_MOVING
@@ -80,14 +84,16 @@ class Tracker(object):
         return self._msd(transfer, len(transfer), micron_per_pixel, frames_per_second)
 
     def __del__(self):
-        pass
-        # if self.debug:
-        #     return
-        #     _handle = self._track_so._handle
-        #     del self._track_so
-        #     if sys.platform == 'linux':
-        #         dl = ctypes.CDLL('libdl.so')
-        #         dl.dlclose(_handle)
+        if not self.debug:
+            return
+
+        _handle = self._track_so._handle
+        del self._track_so
+        if sys.platform == 'linux':
+            dl = ctypes.CDLL('libdl.so')
+            dl.dlclose.argtypes = [ctypes.c_void_p]
+            dl.dlclose(_handle)
+        # elif  # handle windows?
 
     @classmethod
     def empty_track_input_type(cls, count):
