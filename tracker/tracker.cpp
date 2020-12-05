@@ -6,15 +6,18 @@
 #include <numeric>
 #include <vector>
 #include <memory>
-#include <cstring>
 #include <iterator>
 
 #include <iostream>
-#include <new>
 
 using namespace std;
 
 /*
+// Code for basic memory tracking
+
+#include <new>
+#include <cstring>
+
 void *real_new(size_t size) {
     printf("new [%zu] ", size);
     void *ptr = malloc(size + sizeof(size_t));
@@ -153,10 +156,13 @@ template<typename FT, typename IT> struct dataset {
         };
     };
 
+    // list of all emitters
     vector< emitter > emitters;
 
+    // list iterators for each frame, denoting the subset of emitters on that frame (for a sorted liste of emitters)
     vector< pair< emitter_iterator, emitter_iterator > > frame_positions;
 
+    // total count of frames
     size_t frames;
 
 
@@ -208,9 +214,7 @@ template<typename FT, typename IT> struct dataset {
 
         auto the_end = pair<emitter_iterator, emitter_iterator>(emitters.end(), emitters.end());
 
-        frame_positions.resize(frames + 1);
-
-        fill(frame_positions.begin(), frame_positions.end(), the_end);
+        frame_positions.resize(frames + 1, the_end);
 
         for(emitter_iterator em_it = emitters.begin(); em_it != emitters.end(); em_it++ ) {
             if(frame_positions[em_it->frame].first == emitters.end()) {
@@ -358,7 +362,7 @@ template<typename FT, typename IT> struct dataset {
                             for(size_t i = 0; i < count; i++) {
                                 auto& match = matches[i];
 
-                                emitter_iterator earlier_emitter = adaptor[match.first];
+                                auto earlier_emitter = adaptor[match.first];
 
                                 //FT local_max_distance_square = max_distance_square;
 
@@ -467,18 +471,14 @@ extern "C" void track(dataset_type::emitter *input_data, size_t count, float max
 
     data.emitters.resize(count);
 
-    for(size_t i = 0; i < count; i++)
-        data.emitters[i] = input_data[i];
-
+    copy(input_data, input_data + count, data.emitters.begin());
     data.prepare();
 
     data.link(max_distance, memory, (dataset_type::search_mode_type)strategy, (dataset_type::tracking_mode_type)mode);
 
     data.sort_by_index();
 
-    for(size_t i = 0; i < count; i++)
-        input_data[i] = data.emitters[i];
-
+    copy(data.emitters.begin(), data.emitters.end(), input_data);
 };
 
 
@@ -489,8 +489,7 @@ extern "C" float msd(dataset_type::emitter *input_data, size_t count, float MICR
 
     data.emitters.resize(count);
 
-    for(size_t i = 0; i < count; i++)
-        data.emitters[i] = input_data[i];
+    copy(input_data, input_data + count, data.emitters.begin());
     sort(data.emitters.begin(), data.emitters.end(), [](dataset_type::emitter& a, dataset_type::emitter& b) { return a.label < b.label || (a.label == b.label && a.frame < b.frame); });
 
 
