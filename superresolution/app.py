@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2017 Christian C. Sachs, Forschungszentrum Jülich
+# Copyright (C) 2015-2020 Christian C. Sachs, Forschungszentrum Jülich
 #####
 """
 512 x 512 ... 0.065 um per pixel
@@ -17,20 +17,22 @@ exposure/timing:
 
 #####
 
+import time
+import os.path
+import traceback
+from argparse import ArgumentParser
+
 from yaval import Visualizer, Values, VispyPlugin
 from yaval.qt import QFileDialog
 
 import cv2
 import numpy as np
 import pandas as pd
-import time
-import os.path
-
-from argparse import ArgumentParser
-from vispy.scene import visuals
-from vispy.visuals.transforms import STTransform
 
 from scipy.stats import linregress
+
+from vispy.scene import visuals
+from vispy.visuals.transforms import STTransform
 
 from .io import is_image_file, load_dataset, prepare_dataset
 from .misc import Cell, to_rgb8, binarize_image, binarization_to_contours, get_subset_and_snippet, num_tokenize, \
@@ -413,13 +415,13 @@ class SuperresolutionTracking(Visualizer):
                     # sigma is different
 
                     strategy, mode, what = {
-                        'custom_moving_brute': (tracker.STRATEGY_BRUTE_FORCE, tracker.TRACKING_MOVING, 'locprec'),
+                        'custom_moving_brute': (tracker.Strategy.BRUTE_FORCE, tracker.Mode.MOVING, 'locprec'),
                         'custom_static_brute_locprec': (
-                            tracker.STRATEGY_BRUTE_FORCE, tracker.TRACKING_STATIC, 'locprec'),
-                        'custom_static_brute_sigma': (tracker.STRATEGY_BRUTE_FORCE, tracker.TRACKING_STATIC, 'sigma'),
-                        'custom_moving_kd': (tracker.STRATEGY_KDTREE, tracker.TRACKING_MOVING, 'locprec'),
-                        'custom_static_kd_locprec': (tracker.STRATEGY_KDTREE, tracker.TRACKING_STATIC, 'locprec'),
-                        'custom_static_kd_sigma': (tracker.STRATEGY_KDTREE, tracker.TRACKING_STATIC, 'sigma')
+                            tracker.Strategy.BRUTE_FORCE, tracker.Mode.STATIC, 'locprec'),
+                        'custom_static_brute_sigma': (tracker.Strategy.BRUTE_FORCE, tracker.Mode.STATIC, 'sigma'),
+                        'custom_moving_kd': (tracker.Strategy.KD_TREE, tracker.Mode.MOVING, 'locprec'),
+                        'custom_static_kd_locprec': (tracker.Strategy.KD_TREE, tracker.Mode.STATIC, 'locprec'),
+                        'custom_static_kd_sigma': (tracker.Strategy.KD_TREE, tracker.Mode.STATIC, 'sigma')
                     }[values.tracker]
 
                     if what == 'locprec':
@@ -591,7 +593,8 @@ class SuperresolutionTracking(Visualizer):
                     try:
                         redo(n)
                     except Exception as e:
-                        print("error in cell", n, e)
+                        print("A %s exception occurred in cell #%d:" % (type(e).__name__, n))
+                        traceback.print_tb(e.__traceback__)
                 print("Done.")
 
                 values.show_all = True

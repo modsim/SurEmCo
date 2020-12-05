@@ -1,4 +1,5 @@
 import ctypes
+from enum import IntEnum
 import sys
 import os
 import numpy
@@ -6,11 +7,13 @@ import numpy.ctypeslib
 
 
 class Tracker(object):
-    TRACKING_MOVING = 0
-    TRACKING_STATIC = 1
+    class Mode(IntEnum):
+        MOVING = 0
+        STATIC = 1
 
-    STRATEGY_BRUTE_FORCE = 0
-    STRATEGY_KDTREE = 1
+    class Strategy(IntEnum):
+        BRUTE_FORCE = 0
+        KD_TREE = 1
 
     track_input_type = {'dtype': [
         ('x', 'float64'),
@@ -67,10 +70,10 @@ class Tracker(object):
 
     def track(self, transfer, maximum_displacement=1.0, memory=0, mode=None, strategy=None):
         if mode is None:
-            mode = self.TRACKING_MOVING
+            mode = self.Mode.MOVING
 
         if strategy is None:
-            strategy = self.STRATEGY_BRUTE_FORCE
+            strategy = self.Strategy.BRUTE_FORCE
 
         if len(transfer) == 0:
             raise RuntimeError('Empty data!')
