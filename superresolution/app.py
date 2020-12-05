@@ -18,6 +18,7 @@ exposure/timing:
 #####
 
 import time
+import json
 import os.path
 import traceback
 from argparse import ArgumentParser
@@ -62,6 +63,10 @@ def create_argparser():
     parser.add_argument("--add-cell-border", dest="border", type=float, default=0.0)
     parser.add_argument("--calibration", dest="calibration", type=float, default=0.065, help="µm per pixel")
     parser.add_argument("--keep-order", dest="keep_order", action='store_true')
+
+    parser.add_argument("--process", dest="process", action='store_true')
+    parser.add_argument("--parameters", dest="parameters", default=None)
+    parser.add_argument("--output", dest="output", default=None)
 
     return parser
 
@@ -629,6 +634,28 @@ class SuperresolutionTracking(Visualizer):
                     meshes.update()
                 except ValueError:
                     pass
+
+        if args.process:
+            parameters = json.loads(args.parameters)
+
+            values = self.get_values()
+            values['analyse_all'] = True
+            values['_modified'] = 'analyse_all'
+
+            for k, v in parameters.items():
+                values[k] = v
+
+            print("Running analysis ... parameters:")
+            print(values)
+
+            _update(values)
+
+            print("Writing to %s" % (args.output,))
+
+            with open(args.output, 'wt+') as fp:
+                fp.write(self.output_model.get_clipboard_str())
+
+            raise SystemExit
 
         return _update
 
