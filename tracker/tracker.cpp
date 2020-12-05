@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <numeric>
 #include <vector>
+#include <memory>
 #include <cstring>
 #include <iterator>
 
@@ -71,7 +72,9 @@ template<typename T> struct dumb_set {
         iterator position = find(value);
 
         if(position != backing.end()) {
-            swap(*position, backing.back());
+            if(*position != backing.back()) {
+                swap(*position, backing.back());
+            }
             backing.pop_back();
         }
     }
@@ -253,23 +256,19 @@ template<typename FT, typename IT> struct dataset {
         #ifdef WITH_KDTREE
 
         vector<kdtree_adaptor> frame_adaptors;
-        vector<kdtree*> frame_trees;
+        vector<shared_ptr<kdtree>> frame_trees;
 
         frame_adaptors.reserve(frame_positions.size());
         frame_trees.reserve(frame_positions.size());
 
         if(search_mode == SEARCH_MODE_KD_TREE) {
-            for(size_t frame = 0; frame < frames; frame++) {
+            for(auto& position: frame_positions) {
+                auto adaptor = kdtree_adaptor(position);
+                auto tree = shared_ptr<kdtree>(new kdtree(2, adaptor, KDTreeSingleIndexAdaptorParams(10)));
+                tree->buildIndex();
 
-                auto position = frame_positions[frame];
-
-                frame_adaptors[frame] = kdtree_adaptor(position);
-                // the kdtree is pretty serious about not getting initialized properly ;)
-                // thus pointers
-                frame_trees[frame] = new kdtree(2, frame_adaptors[frame], KDTreeSingleIndexAdaptorParams(10));
-
-                frame_trees[frame]->buildIndex();
-
+                frame_adaptors.push_back(adaptor);
+                frame_trees.push_back(tree);
             }
         }
         #endif
@@ -349,7 +348,7 @@ template<typename FT, typename IT> struct dataset {
 
                             point2d<FT> search = current_emitter->position;
 
-                            auto tree = frame_trees[earlier_frame];
+                            auto& tree = frame_trees[earlier_frame];
                             auto adaptor = frame_adaptors[earlier_frame];
 
 
@@ -361,7 +360,7 @@ template<typename FT, typename IT> struct dataset {
 
                                 emitter_iterator earlier_emitter = adaptor[match.first];
 
-                                FT local_max_distance_square = max_distance_square;
+                                //FT local_max_distance_square = max_distance_square;
 
                                 if(tracking_mode == TRACKING_STATIC) {
                                     FT distance = current_emitter->position.distance_square(mean_points[earlier_emitter->label]);
@@ -441,17 +440,6 @@ template<typename FT, typename IT> struct dataset {
                 e.label = label++;
             }
         }
-
-        // it segfaults on dlclose, why?!
-
-        #ifdef WITH_KDTREE
-        if(search_mode == SEARCH_MODE_KD_TREE) {
-            for(size_t frame = 0; frame < frames; frame++) {
-                delete frame_trees[frame];
-            }
-        }
-        #endif
-
 
     }
 
