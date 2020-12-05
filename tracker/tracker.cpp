@@ -245,15 +245,6 @@ template<typename FT, typename IT> struct dataset {
         // label 0 is reserved for unassigned
         IT label = 1;
 
-        for(auto& e : emitters) {
-            if(e.frame > 0) {
-                break;
-            }
-            if(e.label == 0) {
-                e.label = label++;
-            }
-        }
-
         FT max_distance_square = max_distance * max_distance;
 
 
@@ -292,8 +283,7 @@ template<typename FT, typename IT> struct dataset {
             mean_counts.resize(emitters.size()+1);
         }
 
-        for(size_t current_frame = 1; current_frame < frames; current_frame++) {
-
+        for(size_t current_frame = 0; current_frame <= frames; current_frame++) {
             emitter_set current_emitters_to_link;
             emitter_set earlier_emitters_to_link;
             vector<possible_linking> possibilities;
@@ -357,8 +347,7 @@ template<typename FT, typename IT> struct dataset {
 
 
 
-                            size_t count = tree->radiusSearch(&search.x, factor*max_distance_square, matches, params);
-
+                            size_t count = tree->radiusSearch(&search.x, factor*max_distance_square + numeric_limits<FT>::epsilon(), matches, params);
                             for(size_t i = 0; i < count; i++) {
                                 auto& match = matches[i];
 
