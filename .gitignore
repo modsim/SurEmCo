@@ -2,6 +2,11 @@ build/
 dist/
 *.egg-info/
 
+local/
+.idea/
+CMakeLists.txt
+cmake-build-debug/
+
 __pycache__/
 *.pyc
 
