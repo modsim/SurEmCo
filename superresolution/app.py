@@ -385,18 +385,18 @@ class SuperresolutionTracking(Visualizer):
 
                 if values.tracker == 'trackpy' and trackpy:
                     if (
-                            'trackpy_tracked' in cell and
-                            'last_memory' in cell and
-                            cell.last_memory == values.maximum_blink_dark and
-                            'last_displacement' in cell and
-                            cell.last_displacement == values.maximum_displacement
+                            hasattr(cell, 'trackpy_tracked') and
+                            hasattr(cell, 'trackpy_last_memory') and
+                            cell.trackpy_last_memory == values.maximum_blink_dark and
+                            hasattr(cell, 'trackpy_last_displacement') and
+                            cell.trackpy_last_displacement == values.maximum_displacement
                     ):
                         tracked = cell.trackpy_tracked
                     else:
                         tracked = trackpy.link_df(subset, values.maximum_displacement / micron_per_pixel,
                                                   memory=values.maximum_blink_dark, link_strategy='nonrecursive')
-                        cell.last_memory = values.maximum_blink_dark
-                        cell.last_displacement = values.maximum_displacement
+                        cell.trackpy_last_memory = values.maximum_blink_dark
+                        cell.trackpy_last_displacement = values.maximum_displacement
                         cell.trackpy_tracked = tracked
                 elif values.tracker.startswith('custom') and Tracker:
 
