@@ -245,7 +245,7 @@ class SuperresolutionTracking(Visualizer):
         precision_label = Values.Label('precision', "Precision: %.4f µm", 0.0)
         sigma_label = Values.Label('sigma', "Sigma: %.4f µm", 0.0)
 
-        for v in [
+        values = [
             precision_label,
             sigma_label,
             Values.ListValue(None, [0, 1], 'live'),
@@ -266,7 +266,15 @@ class SuperresolutionTracking(Visualizer):
             Values.Action('msd_all'),
             Values.Action('clear'),
             Values.Action('quit')
-        ]:
+        ]
+
+        if args.parameters:
+            parameters = json.loads(args.parameters)
+            for k, v in parameters.items():
+                desired_value = next(value for value in values if value.name == k)
+                desired_value.value = v
+
+        for v in values:
             self.add_value(v)
 
         scatter = visuals.Markers()
@@ -636,16 +644,11 @@ class SuperresolutionTracking(Visualizer):
                     pass
 
         if args.process:
-            parameters = json.loads(args.parameters)
-
             values = self.get_values()
             values['analyse_all'] = True
             values['_modified'] = 'analyse_all'
 
-            for k, v in parameters.items():
-                values[k] = v
-
-            print("Running analysis ... parameters:")
+            print("Running analysis with parameters:")
             print(values)
 
             _update(values)
