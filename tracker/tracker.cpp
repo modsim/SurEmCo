@@ -159,7 +159,7 @@ template<typename FT, typename IT> struct dataset {
     // list of all emitters
     vector< emitter > emitters;
 
-    // list iterators for each frame, denoting the subset of emitters on that frame (for a sorted liste of emitters)
+    // list iterators for each frame, denoting the subset of emitters on that frame (for a sorted list of emitters)
     vector< pair< emitter_iterator, emitter_iterator > > frame_positions;
 
     // total count of frames
@@ -240,7 +240,7 @@ template<typename FT, typename IT> struct dataset {
     typedef dumb_set< emitter_iterator > emitter_set;
 
     inline void link(FT max_distance = 2.0, IT memory = 0, search_mode_type search_mode = SEARCH_MODE_BRUTE_FORCE, tracking_mode_type tracking_mode = TRACKING_MOVING) {
-        memory += 1; // we always look back atleast one frame, otherwise we wouldn't track anything
+        memory += 1; // we always look back at least one frame, otherwise we wouldn't track anything
 
         // label 0 is reserved for unassigned
         IT label = 1;
