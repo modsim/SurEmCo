@@ -170,25 +170,21 @@ template<typename FT, typename IT> struct dataset {
     struct kdtree_adaptor {
         pair< emitter_iterator, emitter_iterator > position;
 
-        inline kdtree_adaptor(pair< emitter_iterator, emitter_iterator > pos) : position(pos) {};
+        inline kdtree_adaptor(pair< emitter_iterator, emitter_iterator > pos) : position(pos) {
+            assert(position.first < position.second || position.first == position.second);
+        };
 
         inline size_t kdtree_get_point_count() const { return position.second - position.first; }
-
-        inline FT kdtree_distance(const FT *p1, const size_t idx, size_t) const {
-            const FT d0 = p1[0] - operator[](idx)->position.x;
-            const FT d1 = p1[1] - operator[](idx)->position.y;
-            return d0 * d0 + d1 * d1;
-        }
 
         inline FT kdtree_get_pt(const size_t idx, int dim) const {
 		    if (dim==0) return operator[](idx)->position.x;
 		    else return operator[](idx)->position.y;
 		}
 
-		template <class BBOX> bool kdtree_get_bbox(BBOX& /*bb*/) const { return false; }
+		template <class BBOX> inline bool kdtree_get_bbox(BBOX& /*bb*/) const { return false; }
 
 		inline emitter_iterator operator[](size_t idx) const {
-		    assert((position.first + idx) < position.second);
+		    assert(idx < kdtree_get_point_count());
 		    return position.first + idx;
 		}
     };
@@ -257,12 +253,13 @@ template<typename FT, typename IT> struct dataset {
         frame_trees.reserve(frame_positions.size());
 
         if(search_mode == SEARCH_MODE_KD_TREE) {
-            for(auto& position: frame_positions) {
-                auto adaptor = kdtree_adaptor(position);
-                auto tree = shared_ptr<kdtree>(new kdtree(2, adaptor, KDTreeSingleIndexAdaptorParams(10)));
+            for(auto position: frame_positions) {
+                frame_adaptors.push_back(kdtree_adaptor(position));
+                // important: the tree needs a REFERENCE to an adaptor object which remains ALIVE till it is used
+                auto tree = shared_ptr<kdtree>(new kdtree(2, frame_adaptors.back(), KDTreeSingleIndexAdaptorParams(10)));
+
                 tree->buildIndex();
 
-                frame_adaptors.push_back(adaptor);
                 frame_trees.push_back(tree);
             }
         }
@@ -343,15 +340,10 @@ template<typename FT, typename IT> struct dataset {
                             point2d<FT> search = current_emitter->position;
 
                             auto& tree = frame_trees[earlier_frame];
-                            auto adaptor = frame_adaptors[earlier_frame];
-
-
 
                             size_t count = tree->radiusSearch(&search.x, factor*max_distance_square + numeric_limits<FT>::epsilon(), matches, params);
-                            for(size_t i = 0; i < count; i++) {
-                                auto& match = matches[i];
-
-                                auto earlier_emitter = adaptor[match.first];
+                            for(auto& match: matches) {
+                                auto earlier_emitter = tree->dataset[match.first];
 
                                 //FT local_max_distance_square = max_distance_square;
 
