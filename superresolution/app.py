@@ -305,10 +305,12 @@ class SuperresolutionTracking(Visualizer):
             if not cell.hull.size:
                 continue
 
-            cell.contour_line = visuals.Line(pos=np.array([(x, y, -0.5) for x, y in cell.render_hull]),
+            cell.contour_line = visuals.Line(pos=np.array([
+                (x, y, -0.5) for x, y in cell.render_hull]),
                                              color=(0.0, 1.0, 0.0, 1.0), width=5)
-            cell.contour_line_bordered = visuals.Line(pos=np.array([(x, y, -0.5) for x, y in cell.render_hull_bordered]),
-                                             color=(0.0, 0.0, 1.0, 1.0), width=5)
+            cell.contour_line_bordered = visuals.Line(pos=np.array([
+                (x, y, -0.5) for x, y in cell.render_hull_bordered
+            ]), color=(0.0, 0.0, 1.0, 1.0), width=5)
 
             plugin.view.add(cell.contour_line)
             plugin.view.add(cell.contour_line_bordered)
@@ -319,7 +321,8 @@ class SuperresolutionTracking(Visualizer):
 
             plugin.view.add(cell.text)
 
-            cell.render_mesh = contour_to_mesh(cell.contour, 0, maximum_frame)  # subset.frame.min(), subset.frame.max())
+            cell.render_mesh = contour_to_mesh(cell.contour, 0, maximum_frame)
+            # subset.frame.min(), subset.frame.max())
 
         result_table = [{} for _ in range(len(cells))]
 
@@ -395,6 +398,7 @@ class SuperresolutionTracking(Visualizer):
 
                 dimensionality = 2  # we can observe only two dimensions, then it should be two?
 
+                # noinspection PyPep8Naming
                 D = np.array(msd / (lagt * 2 * dimensionality))
 
                 result_table[n]["D"] = D.mean()  # [0]
@@ -485,6 +489,7 @@ class SuperresolutionTracking(Visualizer):
 
                         x = np.linspace(0, len(y) - 1, len(y))
 
+                        # noinspection PyPep8Naming
                         Q = np.c_[x / frames_per_second, (y * (micron_per_pixel ** 2))][1:, :]
 
                         lagt = Q[:, 0]
@@ -492,6 +497,7 @@ class SuperresolutionTracking(Visualizer):
 
                         dimensionality = 2  # we can observe only two dimensions, then it should be two?
 
+                        # noinspection PyPep8Naming
                         D = np.array(msd / (lagt * 2 * dimensionality))
                         return D, Q
 
@@ -504,7 +510,6 @@ class SuperresolutionTracking(Visualizer):
                     tracked['particle'] = transfer['label']
                     # expect modern pandas!
                     tracked = tracked.sort_values(by=['particle', 'frame'])
-
 
                 # if args.drift_correction:
                 #    from trackpy import compute_drift, subtract_drift
@@ -634,7 +639,7 @@ class SuperresolutionTracking(Visualizer):
 
                     render_data = np.concatenate(
                         [cell.render_data for cell in cells if cell.render_data is not None])
-                    colors = np.random.random((len(render_data), 4))
+                    # colors = np.random.random((len(render_data), 4))
                     colors = (1, 1, 1, 0.5)
                     scatter.set_data(render_data, edge_color=None, face_color=colors, size=5)
                     scatter.update()

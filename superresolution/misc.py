@@ -23,7 +23,7 @@ def num_tokenize(file_name):
             pass
         return fragment
 
-    return tuple(try_int(fragment) for fragment in re.split('(\d+)', file_name))
+    return tuple(try_int(fragment) for fragment in re.split(r'(\d+)', file_name))
 
 
 # ## GENERIC HELPERS
@@ -46,6 +46,7 @@ def _cv2_get_integral_image_and_squared(image):
 get_integral_image_and_squared = _cv2_get_integral_image_and_squared
 
 
+# noinspection PyUnusedLocal
 def means_and_stddev(image, wr=15):
     enlarged = np.zeros((image.shape[0] + 2 * wr, image.shape[1] + 2 * wr), np.double)
 
@@ -58,6 +59,7 @@ def means_and_stddev(image, wr=15):
 
     ints, intss = get_integral_image_and_squared(enlarged)
 
+    # noinspection PyPep8Naming,PyUnusedLocal
     def calc_sums(mat):
         A = mat[:-2 * wr, :-2 * wr]
         B = mat[2 * wr:, 2 * wr:]
@@ -79,6 +81,7 @@ def means_and_stddev(image, wr=15):
     return means, stddev
 
 
+# noinspection PyUnusedLocal
 def sauvola(image, wr=15, k=0.5, r=128):
     means, stddev = means_and_stddev(image, wr)
     return numexpr.evaluate("image > (means * (1.0 + k * ((stddev / r) - 1.0)))")

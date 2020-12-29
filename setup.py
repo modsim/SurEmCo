@@ -20,10 +20,12 @@ LINUX_OPTIONS = ['-fPIC']
 WINDOWS_OPTIONS = ['-static-libgcc', '-static-libstdc++', '/usr/x86_64-w64-mingw32/lib/libwinpthread.a']
 
 if should_make('superresolution/_tracker.so', ['tracker/tracker.cpp']):
-    call(['g++'] + GPP_OPTIONS + LINUX_OPTIONS + ['tracker/tracker.cpp', '-o', 'superresolution/_tracker.so'])
+    call(['g++'] + GPP_OPTIONS + LINUX_OPTIONS +
+         ['tracker/tracker.cpp', '-o', 'superresolution/_tracker.so'])
 
 if should_make('superresolution/_tracker.dll', ['tracker/tracker.cpp']):
-    call(['x86_64-w64-mingw32-g++'] + GPP_OPTIONS + WINDOWS_OPTIONS + ['tracker/tracker.cpp', '-o', 'superresolution/_tracker.dll'])
+    call(['x86_64-w64-mingw32-g++'] + GPP_OPTIONS + WINDOWS_OPTIONS +
+         ['tracker/tracker.cpp', '-o', 'superresolution/_tracker.dll'])
 
 if should_make('superresolution/libwinpthread-1.dll', ['/usr/x86_64-w64-mingw32/lib/libwinpthread-1.dll']):
     call(['cp', '/usr/x86_64-w64-mingw32/lib/libwinpthread-1.dll', 'superresolution/'])

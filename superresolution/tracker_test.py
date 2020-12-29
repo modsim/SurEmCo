@@ -20,9 +20,9 @@ def generate_emitter(x=1.0, y=1.0, start=0, stop=10, dx=0.0, dy=0.0, dark=None):
     return result
 
 
-def take_n(iter, n=1):
+def take_n(iter_, n=1):
     buffer = tuple()
-    for item in iter:
+    for item in iter_:
         buffer = buffer + (item,)
         if len(buffer) == n:
             yield buffer
@@ -58,13 +58,13 @@ def take_n(iter, n=1):
          ('memory', 1): [1, 1, 1, 1, 1, 3, 3, 3, 2, 2, 2, 2, 2, 4, 4, 4],
          ('memory', 2): [1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2],
      }),
-    #(generate_emitter(x=1.0, y=1.0, dx=0.1, dy=0.1),
-    # {
-    #     ('maximum_displacement', 0.0): [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-    #     ('maximum_displacement', 1.0): [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    # }),
-    # (generate_emitter(x=1.0, y=1.0, dx=0.1, dy=0.1) + generate_emitter(x=5.0, y=5.0, dx=0.1, dy=0.1),
-    # [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]),
+    # (generate_emitter(x=1.0, y=1.0, dx=0.1, dy=0.1),
+    #  {
+    #      ('maximum_displacement', 0.0): [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    #      ('maximum_displacement', 1.0): [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    #  }),
+    #  (generate_emitter(x=1.0, y=1.0, dx=0.1, dy=0.1) + generate_emitter(x=5.0, y=5.0, dx=0.1, dy=0.1),
+    #  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]),
 ])
 @pytest.mark.parametrize('maximum_displacement', [1.0, 0.0])
 @pytest.mark.parametrize('memory', [0, 1, 2])
@@ -99,7 +99,6 @@ def test_tracker(data_and_expected, maximum_displacement, memory, mode, strategy
         expected = expected[best_key]
 
     expected = np.array(expected)
-
 
     transfer = tracker.empty_track_input_type(len(data))
     transfer['x'] = data[:, 0]
