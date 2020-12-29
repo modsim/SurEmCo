@@ -30,7 +30,9 @@ class Tracker(object):
     msd = None
     track = None
 
-    def __init__(self):
+    def __init__(self, debug=False):
+        self.debug = debug
+
         file = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                             '_tracker.' + ('so' if sys.platform == 'linux' else 'dll'))
 
@@ -77,6 +79,14 @@ class Tracker(object):
 
         if len(transfer) == 0:
             raise RuntimeError('Empty data!')
+
+        if self.debug:
+            from tempfile import NamedTemporaryFile
+            with NamedTemporaryFile(prefix='track_dataset', delete=False) as tf:
+                transfer.tofile(tf)
+                print("track(\"%s\", %d, %f, %d, %d, %d)" % (
+                    tf.name, len(transfer), maximum_displacement, memory, mode, strategy
+                ))
 
         return self._track(transfer, len(transfer), maximum_displacement, memory, mode, strategy)
 

@@ -12,3 +12,8 @@ __pycache__/
 
 *.dll
 *.so
+
+*.png
+*.txt
+*.tif
+*.tiff

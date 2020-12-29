@@ -63,6 +63,7 @@ def create_argparser():
     parser.add_argument("--add-cell-border", dest="border", type=float, default=0.0)
     parser.add_argument("--calibration", dest="calibration", type=float, default=0.065, help="µm per pixel")
     parser.add_argument("--keep-order", dest="keep_order", action='store_true')
+    parser.add_argument("--debug", dest="debug", action='store_true', default=False)
 
     parser.add_argument("--process", dest="process", action='store_true')
     parser.add_argument("--parameters", dest="parameters", default=None)
@@ -138,7 +139,21 @@ class SuperresolutionTracking(Visualizer):
             cells = [Cell(subset=data)]
         else:
             binarization = binarize_image(image)
+
+            if args.debug:
+                cv2.imwrite('debug_output_binarization.png', 255-(binarization * 255).astype(np.uint8))
+
             cells = [Cell(contour=contour) for contour in binarization_to_contours(binarization)]
+
+            if args.debug:
+                _hulls = np.zeros_like(binarization, dtype=np.uint8)
+
+                for cell in cells:
+                    cv2.drawContours(_hulls, [cell.hull], -1, 255, thickness=cv2.FILLED)
+
+                cv2.imwrite('debug_output_hulls.png', _hulls)
+
+                del _hulls
 
             # label them
             for n, cell in enumerate(cells):
@@ -415,7 +430,7 @@ class SuperresolutionTracking(Visualizer):
                         cell.trackpy_tracked = tracked
                 elif values.tracker.startswith('custom') and Tracker:
 
-                    tracker = Tracker()
+                    tracker = Tracker(debug=args.debug)
 
                     transfer = tracker.empty_track_input_type(len(subset))
 
@@ -444,8 +459,6 @@ class SuperresolutionTracking(Visualizer):
 
                     tracker.track(transfer, values.maximum_displacement / micron_per_pixel, values.maximum_blink_dark,
                                   mode, strategy)
-
-                    # np.save("_tmp.npy", transfer)
 
                     def my_emsd(data):
                         maxframe = 0

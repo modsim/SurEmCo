@@ -15,6 +15,7 @@ def should_make(dst, src):
 
 
 GPP_OPTIONS = ['-g', '-std=c++11', '-O3', '-Itracker', '-shared']
+# GPP_OPTIONS += ['-D_GLIBCXX_DEBUG']
 LINUX_OPTIONS = ['-fPIC']
 WINDOWS_OPTIONS = ['-static-libgcc', '-static-libstdc++', '/usr/x86_64-w64-mingw32/lib/libwinpthread.a']
 
