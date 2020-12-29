@@ -53,7 +53,7 @@ except ImportError:
 
 
 def create_argparser():
-    parser = ArgumentParser(description="Superresolution Analyser")
+    parser = ArgumentParser(description="SurEmCo - Superresolution Emitter Counter")
 
     parser.add_argument("files", metavar="files", type=str, nargs='*', default=[],
                         help="input files, one must be a DIA image")
@@ -73,9 +73,8 @@ def create_argparser():
 
 
 class SuperresolutionTracking(Visualizer):
-    title = "Superresolution Cell Detection & Emitter Tracking - " + \
-            "by Christian C. Sachs, ModSim Group, IBG-1, FZ-Jülich - " + \
-            "Preliminary software, do not rely on results!"
+    title = "SurEmCo - Superresolution Emitter Counter – " + \
+            "by ModSim Group/IBG-1/FZ Jülich"
 
     result_table = True
 

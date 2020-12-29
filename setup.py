@@ -19,31 +19,31 @@ GPP_OPTIONS = ['-g', '-std=c++11', '-O3', '-Itracker', '-shared']
 LINUX_OPTIONS = ['-fPIC']
 WINDOWS_OPTIONS = ['-static-libgcc', '-static-libstdc++', '/usr/x86_64-w64-mingw32/lib/libwinpthread.a']
 
-if should_make('superresolution/_tracker.so', ['tracker/tracker.cpp']):
+if should_make('suremco/_tracker.so', ['tracker/tracker.cpp']):
     call(['g++'] + GPP_OPTIONS + LINUX_OPTIONS +
-         ['tracker/tracker.cpp', '-o', 'superresolution/_tracker.so'])
+         ['tracker/tracker.cpp', '-o', 'suremco/_tracker.so'])
 
-if should_make('superresolution/_tracker.dll', ['tracker/tracker.cpp']):
+if should_make('suremco/_tracker.dll', ['tracker/tracker.cpp']):
     call(['x86_64-w64-mingw32-g++'] + GPP_OPTIONS + WINDOWS_OPTIONS +
-         ['tracker/tracker.cpp', '-o', 'superresolution/_tracker.dll'])
+         ['tracker/tracker.cpp', '-o', 'suremco/_tracker.dll'])
 
-if should_make('superresolution/libwinpthread-1.dll', ['/usr/x86_64-w64-mingw32/lib/libwinpthread-1.dll']):
-    call(['cp', '/usr/x86_64-w64-mingw32/lib/libwinpthread-1.dll', 'superresolution/'])
+if should_make('suremco/libwinpthread-1.dll', ['/usr/x86_64-w64-mingw32/lib/libwinpthread-1.dll']):
+    call(['cp', '/usr/x86_64-w64-mingw32/lib/libwinpthread-1.dll', 'suremco/'])
 
 setup(
-    name='superresolution',
+    name='suremco',
     version='0.0.1+snapshot',
-    description='Superresolution Analysis Software',
+    description='Superresolution Emitter Counter',
     long_description='',
     author='Christian C. Sachs',
     author_email='c.sachs@fz-juelich.de',
-    url='https://github.com/modsim/superresolution-bacterial-analysis-tool',
+    url='https://github.com/modsim/suremco',
     packages=find_packages(),
     requires=['yaval', 'PySide2', 'numpy', 'cv2', 'vispy', 'trackpy', 'scipy', 'pandas', 'numexpr'],
     license='BSD',
-    py_modules=['superresolution'],
+    py_modules=['suremco'],
     package_data={
-        'superresolution': [
+        'suremco': [
             '_tracker.so',
             '_tracker.dll',
             'libwinpthread-1.dll'

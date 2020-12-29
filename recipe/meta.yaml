@@ -1,4 +1,4 @@
-{% set name = "superresolution" %}
+{% set name = "suremco" %}
 {% set version = "0.0.1.post1" %}
 {% set sha256 = "" %}
 
@@ -32,17 +32,17 @@ requirements:
     - trackpy
 test:
   imports:
-    - superresolution
+    - suremco
 
 about:
-  home: https://github.com/modsim/superresolution-bacterial-analysis-tool
+  home: https://github.com/modsim/suremco
   license: BSD-2-Clause
   license_family: BSD
-  summary: 'Superresolution Analysis Software'
+  summary: 'Superresolution Emitter Counter'
   description: |
-    Superresolution Analysis Software
-  doc_url: https://github.com/csachs/superresolution-bacterial-analysis-tool
-  dev_url: https://github.com/csachs/superresolution-bacterial-analysis-tool
+    Superresolution Emitter Counter
+  doc_url: https://github.com/modsim/suremco
+  dev_url: https://github.com/modsim/suremco
 
 extra:
   recipe-maintainers:
