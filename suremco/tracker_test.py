@@ -82,11 +82,11 @@ def test_tracker(data_and_expected, maximum_displacement, memory, mode, strategy
         kwargs = dict(maximum_displacement=maximum_displacement, memory=memory, mode=mode, strategy=strategy)
         expected_keys = {key: dict(take_n(key, 2)) for key in expected.keys()}
 
-        def match_dicts(test, possibilites):
+        def match_dicts(test, possibilities):
             hits = 0
             for test_key, test_value in test.items():
-                if test_key in possibilites:
-                    if possibilites[test_key] == test_value:
+                if test_key in possibilities:
+                    if possibilities[test_key] == test_value:
                         hits += 1
             return hits
 

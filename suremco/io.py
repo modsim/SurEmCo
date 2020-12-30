@@ -1,3 +1,5 @@
+# SurEmCo - IO routines
+
 import os
 
 import numpy

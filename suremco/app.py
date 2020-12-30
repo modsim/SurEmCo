@@ -1,21 +1,4 @@
-# Copyright (C) 2015-2020 Christian C. Sachs, Forschungszentrum Jülich
-#####
-"""
-512 x 512 ... 0.065 um per pixel
-2560 x 2560 ... 0.013 um per pixel
-
-
-Average ribosome diffusion rate: 0.04 +- 0.01 square micrometer per second
-assumption: all fluorescent ribosomal proteins are bound in ribosomes
-
-exposure/timing:
-50ms exposure + 36ms delay
-(exposure every 86ms)
-
-"""
-
-
-#####
+# SurEmCo - Main file
 
 import time
 import json
@@ -29,8 +12,6 @@ from yaval.qt import QFileDialog
 import cv2
 import numpy as np
 import pandas as pd
-
-from scipy.stats import linregress
 
 from vispy.scene import visuals
 from vispy.visuals.transforms import STTransform
@@ -72,7 +53,7 @@ def create_argparser():
     return parser
 
 
-class SuperresolutionTracking(Visualizer):
+class SurEmCo(Visualizer):
     title = "SurEmCo - Superresolution Emitter Counter – " + \
             "by ModSim Group/IBG-1/FZ Jülich"
 
@@ -161,14 +142,6 @@ class SuperresolutionTracking(Visualizer):
             for cell in cells:
                 get_subset_and_snippet(cell, data, args.border / args.calibration)
 
-            # markerize_identical_emitters(cell)
-
-            # for cell in cells:
-            #     cv2.drawContours(canvas, [cell.hull], -1, (0, 255, 0))
-            # for n, cell in enumerate(cells):
-            #     cv2.putText(canvas, "%d" % (n,), tuple(map(int, cv2.minAreaRect(cell.hull)[0])),
-            #                 cv2.FONT_HERSHEY_PLAIN, 1, (255, 0, 0))
-
             if len(cells) == 0:
                 print(
                     "WARNING: Cell detection was requested, but no cells were detected!" +
@@ -191,65 +164,8 @@ class SuperresolutionTracking(Visualizer):
 
                 cells.append(Cell(subset=data, name='%d Everything' % len(cells)))
 
-        # this does NOT work.
         if args.drift_correction:
-            print("Drift correction")
-
-            groups_groups = [cell.subset.groupby(by='frame') for cell in cells]
-
-            n = 0
-            drift_subset = np.zeros((sum(len(g) for g in groups_groups), 3))
-
-            for groups in groups_groups:
-
-                first_x = None
-                first_y = None
-
-                for frame, group in groups:
-                    if first_x is None and first_y is None:
-                        first_x, first_y = group.x.mean(), group.y.mean()
-                    drift_subset[n, 0] = frame
-                    drift_subset[n, 1] = group.x.mean() - first_x
-                    drift_subset[n, 2] = group.y.mean() - first_y
-
-                    n += 1
-
-            print("XFIT")
-            xfit = linregress(drift_subset[:, 0], drift_subset[:, 1])
-            print(xfit)
-            print("YFIT")
-            yfit = linregress(drift_subset[:, 0], drift_subset[:, 2])
-            print(yfit)
-
-            for cell in cells:
-                cell.subset.x -= cell.subset.frame * xfit.slope  # + xfit.intercept
-                cell.subset.y -= cell.subset.frame * yfit.slope  # + yfit.intercept
-        #
-        #     #raise SystemExit
-
-        if False and args.drift_correction:
-            intermediate = data.groupby('frame')
-            drift_subset = np.zeros((len(intermediate), 3))
-
-            for n, (frame, g) in enumerate(intermediate):
-                drift_subset[n, 0] = frame
-                drift_subset[n, 1] = g.x.mean()
-                drift_subset[n, 2] = g.y.mean()
-
-            drift_subset[:, 1] -= drift_subset[0, 1]
-            drift_subset[:, 2] -= drift_subset[0, 2]
-
-            print("XFIT")
-            xfit = linregress(drift_subset[:, 0], drift_subset[:, 1])
-            print(xfit)
-            print("YFIT")
-            yfit = linregress(drift_subset[:, 0], drift_subset[:, 2])
-            print(yfit)
-
-            for cell in cells:
-                cell.subset.x -= cell.subset.frame * xfit.slope + xfit.intercept
-                cell.subset.y -= cell.subset.frame * yfit.slope + yfit.intercept
-        #####
+            raise RuntimeError('Drift correction currently not implemented.')
 
         plugin = VispyPlugin()
         self.register_plugin(plugin)
@@ -276,8 +192,6 @@ class SuperresolutionTracking(Visualizer):
             Values.Action('refresh'),
             Values.Action('show_all'),
             Values.Action('analyse_all'),
-            Values.Action('msd'),
-            Values.Action('msd_all'),
             Values.Action('clear'),
             Values.Action('quit')
         ]
@@ -331,9 +245,6 @@ class SuperresolutionTracking(Visualizer):
                     "Cell #": str(n),
                     "Max Displacement (µm)": float('nan'),
                     "Max Dark (frames)": float('nan'),
-                    "D": float('nan'),
-                    "D_MSD": float('nan'),
-                    # "D_LAGT": float('nan'),
                     "Count": float('nan'),
                     "Mean Loc Precision (µm)": float('nan'),
                     "Mean Loc Sigma (µm)": float('nan'),
@@ -347,7 +258,6 @@ class SuperresolutionTracking(Visualizer):
                     "Filenames Results": '',
                     "Filename AVG full": '',
                     "Filenames Results full": '',
-                    "Westerwalbesloh Ratio": float('nan')  # this needs to be renamed at some point ;)
                 })
 
             self.output_model.update_data(result_table)
@@ -359,55 +269,10 @@ class SuperresolutionTracking(Visualizer):
 
         def _update(values):
             micron_per_pixel = (values.calibration / 1000.0)
-            frames_per_second = 1000.0 / values.exposure_time
+            # frames_per_second = 1000.0 / values.exposure_time
 
             precision_label.update(precision_in_pixel * micron_per_pixel)
             sigma_label.update(sigma_in_pixel * micron_per_pixel)
-
-            def calc_diff(n):
-
-                cell = cells[n]
-
-                tracked = cell.tracked
-
-                # had some discussions with slavko
-                # if False:
-                #     from matplotlib import pyplot
-                #
-                #     im = trackpy.imsd(tracked, micron_per_pixel, frames_per_second)
-                #     fig, ax = pyplot.subplots()
-                #     ax.plot(im.index, im, 'k-', alpha=0.01)
-                #     ax.set(ylabel=r'$\langle \Delta r^2 \rangle$ [$\mu$m$^2$]',
-                #            xlabel='lag time $t$')
-                #     ax.set_xscale('log')
-                #     ax.set_yscale('log')
-                #     fig.savefig('_test.pdf')
-
-                # for pid, trajectory in tracked.groupby('particle'):
-                #    msd = trackpy.msd(trajectory, micron_per_pixel, frames_per_second)
-                #    pylab.plot(np.array(msd.index), np.array(msd))
-
-                # imsd = trackpy.imsd(tracked, micron_per_pixel, frames_per_second)
-                # print(imsd)
-
-                emsd = trackpy.emsd(tracked, micron_per_pixel, frames_per_second)
-                cell.emsd = emsd
-                lagt = np.array(emsd.index)
-                msd = np.array(emsd)
-
-                dimensionality = 2  # we can observe only two dimensions, then it should be two?
-
-                # noinspection PyPep8Naming
-                D = np.array(msd / (lagt * 2 * dimensionality))
-
-                result_table[n]["D"] = D.mean()  # [0]
-                # result_table[n]["D_MSD"] = msd[0]
-                # result_table[n]["D_LAGT"] = lagt[0]
-
-                # print("Cell", n)
-                # print(np.c_[lagt, msd, D])
-
-                self.output_model.update_data(result_table)
 
             def redo(n):
 
@@ -415,6 +280,8 @@ class SuperresolutionTracking(Visualizer):
                 subset = cell.subset
 
                 before_tracking = time.time()
+
+                tracked = None
 
                 if values.tracker == 'trackpy' and trackpy:
                     if (
@@ -463,59 +330,10 @@ class SuperresolutionTracking(Visualizer):
                     tracker.track(transfer, values.maximum_displacement / micron_per_pixel, values.maximum_blink_dark,
                                   mode, strategy)
 
-                    def my_emsd(data):
-                        maxframe = 0
-                        tracks = []
-                        for label in sorted(np.unique(data['label'])):
-                            trace = data[data['label'] == label].copy()
-                            if len(trace) == 1:
-                                continue
-                            trace = np.sort(trace, order='frame')
-                            relframe = trace['frame'].copy()
-                            relframe -= relframe.min()
-                            relframemax = relframe.max()
-                            if relframemax > maxframe:
-                                maxframe = relframemax
-                            tracks.append((trace, relframe))
-
-                        result = np.ones((len(tracks), maxframe + 1)) * float('nan')
-
-                        for n, (trace, relframe) in enumerate(tracks):
-                            for m, sqd in zip(relframe, trace['square_displacement']):
-                                result[n, m] = sqd
-
-                        y = np.nanmean(result, axis=0)
-
-                        x = np.linspace(0, len(y) - 1, len(y))
-
-                        # noinspection PyPep8Naming
-                        Q = np.c_[x / frames_per_second, (y * (micron_per_pixel ** 2))][1:, :]
-
-                        lagt = Q[:, 0]
-                        msd = Q[:, 1]
-
-                        dimensionality = 2  # we can observe only two dimensions, then it should be two?
-
-                        # noinspection PyPep8Naming
-                        D = np.array(msd / (lagt * 2 * dimensionality))
-                        return D, Q
-
-                    # D, Q = my_emsd(transfer)
-                    result_table[n]["D"] = tracker.msd(transfer, micron_per_pixel, frames_per_second)  # D.mean()
-                    # result_table[n]["D_MSD"] = float('nan')
-                    # result_table[n]["D_MSD"] = (Q[:, 1]/Q[:, 0]).mean()
-
                     tracked = subset.copy()
                     tracked['particle'] = transfer['label']
                     # expect modern pandas!
                     tracked = tracked.sort_values(by=['particle', 'frame'])
-
-                # if args.drift_correction:
-                #    from trackpy import compute_drift, subtract_drift
-
-                #    drift = compute_drift(tracked)
-                #    print(drift)
-                #    tracked = subtract_drift(drift)
 
                 after_tracking = time.time()
 
@@ -567,10 +385,6 @@ class SuperresolutionTracking(Visualizer):
                 the_count = int(tracked.particle.max())
                 result_table[n]["Count"] = the_count
 
-                ###
-                result_table[n]["Westerwalbesloh Ratio"] = the_count / len(tracked)
-                ###
-
                 result_table[n]["Mean Loc Precision (µm)"] = subset.locprec.mean() * micron_per_pixel
                 result_table[n]["Mean Loc Sigma (µm)"] = subset.sigma.mean() * micron_per_pixel
 
@@ -589,6 +403,9 @@ class SuperresolutionTracking(Visualizer):
                     result_table[n]["Convex hull area (µm²)"] = the_area
                     result_table[n]["Count / µm²"] = the_count / the_area
 
+                result_table[n]["exposure (ms)"] = values.exposure_time
+                result_table[n]["nm per pixel"] = values.calibration
+
                 self.output_model.update_data(result_table)
 
             if values['clear']:
@@ -600,6 +417,7 @@ class SuperresolutionTracking(Visualizer):
             rendered_image.transform = STTransform(translate=(0.0, 0.0, values.image_display_frame))
             rendered_image.update()
 
+            # noinspection PyProtectedMember
             if values._modified == 'image_display_frame':
                 return
 
@@ -608,15 +426,9 @@ class SuperresolutionTracking(Visualizer):
                 try:
                     redo(n)
                 except Exception as e:
-                    print("error in cell", n, e)
-
-            if values.msd:
-                calc_diff(values.cell)
-
-            if values.msd_all:
-                for n in range(len(cells)):
-                    calc_diff(n)
-                print("Done.")
+                    print("A %s exception occurred in cell #%d:" % (type(e).__name__, n))
+                    print(str(e))
+                    traceback.print_tb(e.__traceback__)
 
             if values.analyse_all:  # or (values.tracker.startswith('custom') and values.live == 1):
                 for n in range(len(cells)):
@@ -624,6 +436,7 @@ class SuperresolutionTracking(Visualizer):
                         redo(n)
                     except Exception as e:
                         print("A %s exception occurred in cell #%d:" % (type(e).__name__, n))
+                        print(str(e))
                         traceback.print_tb(e.__traceback__)
                 print("Done.")
 
@@ -681,4 +494,4 @@ class SuperresolutionTracking(Visualizer):
 
 
 def main():
-    SuperresolutionTracking.run()
+    SurEmCo.run()

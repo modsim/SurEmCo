@@ -1,3 +1,5 @@
+# SurEmCo - C++ tracker wrapper
+
 import ctypes
 from enum import IntEnum
 import sys
@@ -26,9 +28,6 @@ class Tracker(object):
     ]}
 
     debug = False
-
-    msd = None
-    track = None
 
     def __init__(self, debug=False):
         self.debug = debug
@@ -68,6 +67,7 @@ class Tracker(object):
 
         if self.debug:
             _track_so.getBuildDate.restype = ctypes.c_char_p
+            # noinspection PyProtectedMember
             print("Loaded %s compiled at %s" % (_track_so._name, _track_so.getBuildDate().decode(),))
 
     def track(self, transfer, maximum_displacement=1.0, memory=0, mode=None, strategy=None):
@@ -91,6 +91,7 @@ class Tracker(object):
         return self._track(transfer, len(transfer), maximum_displacement, memory, mode, strategy)
 
     def msd(self, transfer, micron_per_pixel=1.0, frames_per_second=1.0):
+        # the MSD calculation was not thoroughly verified
         if len(transfer) == 0:
             raise RuntimeError('Empty data!')
 
@@ -100,6 +101,7 @@ class Tracker(object):
         if not self.debug:
             return
 
+        # noinspection PyProtectedMember
         _handle = self._track_so._handle
         del self._track_so
         if sys.platform == 'linux':

@@ -13,7 +13,19 @@ Please cite our publication in case you use SurEmCo.
 
 # Installation
 
-Ideally, use Ubuntu Linux to build the package, the optimized tracking code written in C++ is currently set to be cross-compiled for Windows in one go.
+Compilation of the tracker has only been tested with Ubuntu Linux (among others, the `g++ g++-mingw-w64-x86-64` packages might be needed), where it is cross-compiled for Windows as well.
+
+To just use SurEmCo, it is recommended to install it via Anaconda:
+```
+> conda install -yc modsim suremco
+```
+
+It can then be started via
+```
+> python -m suremco
+# or with filenames
+> python -m suremco dia_image.png snsmil_output.txt
+```
 
 # License
 
