@@ -32,14 +32,14 @@ if should_make('suremco/libwinpthread-1.dll', ['/usr/x86_64-w64-mingw32/lib/libw
 
 setup(
     name='suremco',
-    version='0.0.1+snapshot',
+    version='1.0.0rc1',
     description='Superresolution Emitter Counter',
     long_description='',
     author='Christian C. Sachs',
     author_email='c.sachs@fz-juelich.de',
     url='https://github.com/modsim/suremco',
     packages=find_packages(),
-    requires=['yaval', 'PySide2', 'numpy', 'cv2', 'vispy', 'trackpy', 'scipy', 'pandas', 'numexpr'],
+    install_requires=['yaval', 'PySide2', 'numpy', 'cv2', 'vispy', 'trackpy', 'scipy', 'pandas', 'numexpr'],
     license='BSD',
     py_modules=['suremco'],
     package_data={
