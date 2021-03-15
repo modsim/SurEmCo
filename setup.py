@@ -19,20 +19,20 @@ GPP_OPTIONS = ['-g', '-std=c++11', '-O3', '-Itracker', '-shared']
 LINUX_OPTIONS = ['-fPIC']
 WINDOWS_OPTIONS = ['-static-libgcc', '-static-libstdc++', '/usr/x86_64-w64-mingw32/lib/libwinpthread.a']
 
-if should_make('suremco/_tracker.so', ['tracker/tracker.cpp']):
+if should_make('suremco/_tracker.so', ['suremco/tracker.cpp']):
     call(['g++'] + GPP_OPTIONS + LINUX_OPTIONS +
-         ['tracker/tracker.cpp', '-o', 'suremco/_tracker.so'])
+         ['suremco/tracker.cpp', '-o', 'suremco/_tracker.so'])
 
-if should_make('suremco/_tracker.dll', ['tracker/tracker.cpp']):
+if should_make('suremco/_tracker.dll', ['suremco/tracker.cpp']):
     call(['x86_64-w64-mingw32-g++'] + GPP_OPTIONS + WINDOWS_OPTIONS +
-         ['tracker/tracker.cpp', '-o', 'suremco/_tracker.dll'])
+         ['suremco/tracker.cpp', '-o', 'suremco/_tracker.dll'])
 
 if should_make('suremco/libwinpthread-1.dll', ['/usr/x86_64-w64-mingw32/lib/libwinpthread-1.dll']):
     call(['cp', '/usr/x86_64-w64-mingw32/lib/libwinpthread-1.dll', 'suremco/'])
 
 setup(
     name='suremco',
-    version='1.0.0rc1',
+    version='1.0.0rc2',
     description='Superresolution Emitter Counter',
     long_description='',
     author='Christian C. Sachs',
@@ -46,7 +46,9 @@ setup(
         'suremco': [
             '_tracker.so',
             '_tracker.dll',
-            'libwinpthread-1.dll'
+            'libwinpthread-1.dll',
+            'tracker.cpp',
+            'nanoflann.hpp',
         ],
     },
     classifiers=[

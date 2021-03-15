@@ -1,6 +1,6 @@
 # SurEmCo
 
-The *Su*per*r*esolution *Em*mitter *Co*unter, as used to perform some analysis steps of the following publication:
+The *Su*per*r*esolution *Em*itter *Co*unter, as used to perform some analysis steps of the following publication:
 
 ```
 Growth-rate dependency of translation rate and active ribosome pool in Corynebacterium glutamicum differ from that of Escherichia coli

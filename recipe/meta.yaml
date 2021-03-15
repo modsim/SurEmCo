@@ -1,6 +1,6 @@
 {% set name = "suremco" %}
-{% set version = "1.0.0rc1" %}
-{% set sha256 = "dbdae5960776577aacdc3ce86e1b9e713760a1f4d0fbddac118bc2eab2021e0a" %}
+{% set version = "1.0.0rc2" %}
+{% set sha256 = "bfd51333277306b9a9fab180bcff35e1866cd44e46fece8534413f77fecda151" %}
 
 package:
   name: {{ name|lower }}
